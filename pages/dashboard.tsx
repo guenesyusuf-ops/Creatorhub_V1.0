@@ -260,6 +260,7 @@ body.dark .search-inp{color:#f0f0f0;}
 /* DIVIDER */
 .divider{height:1px;background:var(--bdr);margin:10px 0;}
 `
+
 const HTML = `
 
 <!-- ADMIN SIDEBAR -->
@@ -574,6 +575,7 @@ const HTML = `
 <div class="toast" id="toast"></div>
 
 `
+
 const JS = `
 const G=id=>document.getElementById(id);
 const CL=['#6366f1','#ec4899','#06b6d4','#f97316','#84cc16','#f43f5e','#8b5cf6','#10b981'];
@@ -1218,14 +1220,33 @@ function rTeam(){
 function rCInvite(){
   // Fill produkte dropdown
   G('ci-prod').innerHTML=\`<option value="">– Kein Produkt –</option>\`+S.produkte.map(p=>\`<option value="\${p.id}">\${p.name}</option>\`).join('');
-  // Invited list
+  // Invited list with date, status, last login
   const invited=S.creators.filter(c=>c.invited);
-  G('ci-list').innerHTML=invited.length?invited.map(c=>\`
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr)">
-      <div style="width:28px;height:28px;border-radius:50%;background:\${c.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0">\${c.ini}</div>
-      <div style="flex:1"><div style="font-size:12px;font-weight:500">\${c.name}</div><div style="font-size:10px;color:var(--muted)">\${c.email}</div></div>
-      <span style="font-size:10px;background:#f0fdf4;color:var(--grn);border:1px solid #bbf7d0;border-radius:5px;padding:1px 6px">Portal ✓</span>
-    </div>\`).join(''):'<div style="color:var(--muted);font-size:12px">Noch keine Creator eingeladen</div>';
+  if(!invited.length){
+    G('ci-list').innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Noch keine Creator eingeladen</div>';
+  } else {
+    const rows=invited.map((c,i)=>{
+      const invDate=c.invitedAt?new Date(c.invitedAt).toLocaleDateString('de-DE'):'-';
+      const lastLogin=c.lastLogin?new Date(c.lastLogin).toLocaleDateString('de-DE'):'-';
+      const accepted=!!c.lastLogin;
+      const bb=i<invited.length-1?'border-bottom:1px solid var(--bdr);':'';
+      const statusBadge=accepted
+        ?'<span style="font-size:10px;background:#f0fdf4;color:var(--grn);border:1px solid #bbf7d0;border-radius:5px;padding:1px 7px">✓ Angenommen</span>'
+        :'<span style="font-size:10px;background:#fffbeb;color:#d97706;border:1px solid #fde68a;border-radius:5px;padding:1px 7px">⏳ Ausstehend</span>';
+      return '<div style="display:grid;grid-template-columns:2fr 1.1fr 1.2fr 1fr;align-items:center;padding:8px 10px;'+bb+'gap:8px">'
+        +'<div style="display:flex;align-items:center;gap:7px">'
+        +'<div style="width:24px;height:24px;border-radius:50%;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;flex-shrink:0">'+c.ini+'</div>'
+        +'<div><div style="font-size:12px;font-weight:500">'+c.name+'</div><div style="font-size:10px;color:var(--muted)">'+( c.email||'-')+'</div></div></div>'
+        +'<div style="font-size:11px">'+invDate+'</div>'
+        +statusBadge
+        +'<div style="font-size:11px;color:'+(accepted?'var(--text)':'var(--muted)')+'">'+lastLogin+'</div>'
+        +'</div>';
+    }).join('');
+    G('ci-list').innerHTML='<div style="border:1px solid var(--bdr);border-radius:8px;overflow:hidden">'
+      +'<div style="display:grid;grid-template-columns:2fr 1.1fr 1.2fr 1fr;padding:6px 10px;background:var(--lt);border-bottom:1px solid var(--bdr);font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px">'
+      +'<div>Creator</div><div>Eingeladen am</div><div>Status</div><div>Letzter Login</div></div>'
+      +rows+'</div>';
+  }
 }
 
 // ── PORTAL ────────────────────────────────────────────────────────────────
@@ -1611,9 +1632,9 @@ function confirmM(){
         const token=localStorage.getItem('token')||'';
         const res=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({name,email,role})});
         const data=await res.json();
-        if(res.ok){S.team.push({id:data.user?.id||uid(),name,email,role,status:'pending'});rTeam();showT('✓ Einladungs-E-Mail gesendet an '+email);}
-        else{showT('Fehler: '+(data.error||'Unbekannt'));}
-      }catch(e){S.team.push({id:uid(),name,email,role,status:'pending'});rTeam();showT('✓ Team-Mitglied hinzugefügt (Offline-Modus)');}
+        if(res.ok){S.team.push({id:data.user&&data.user.id?data.user.id:uid(),name,email,role,status:'pending'});rTeam();showT('✓ Einladungs-E-Mail gesendet an '+email);}
+        else showT('Fehler: '+(data.error||'Unbekannt'));
+      }catch(e){S.team.push({id:uid(),name,email,role,status:'pending'});rTeam();showT('✓ Mitglied hinzugefügt');}
     })();return;
   }
   if(type==='addCToP'){if(!S.aPJ)return;S.aPJ.cids=[...S.selC];rPJHdr();rPJT(S.aPT);closeM();showT(\`\${S.selC.length} Creator zugewiesen ✓\`);return;}
@@ -1674,7 +1695,7 @@ G('ci-send').addEventListener('click',async ()=>{
   if(!email||!email.includes('@')){showT('Gültige E-Mail erforderlich');return;}
   let c=S.creators.find(x=>x.email===email);
   if(!c){
-    c={id:uid(),name,ini:name.slice(0,2).toUpperCase(),color:CL[S.creators.length%CL.length],age:25,email,gender:'female',country:'DE',tags:[],desc:'Creator',up:new Date(),photo:null,instagram:'',verguetung:'provision',provision:'',fixbetrag:'',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:false,kids:false,kidsAges:[],kidsOnVid:false,flds:{bilder:[],videos:[],roh:[],auswertung:[]}};
+    c={id:uid(),name,ini:name.slice(0,2).toUpperCase(),color:CL[S.creators.length%CL.length],age:25,email,gender:'female',country:'DE',tags:[],desc:'Creator',up:new Date(),photo:null,instagram:'',verguetung:'provision',provision:'',fixbetrag:'',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:false,invitedAt:null,lastLogin:null,kids:false,kidsAges:[],kidsOnVid:false,flds:{bilder:[],videos:[],roh:[],auswertung:[]}};
     S.creators.push(c);
   }
   showT('⏳ E-Mail wird gesendet...');
@@ -1682,9 +1703,9 @@ G('ci-send').addEventListener('click',async ()=>{
     const token=localStorage.getItem('token')||'';
     const res=await fetch('/api/creators/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:c.id,email})});
     const data=await res.json();
-    if(res.ok){c.invited=true;rCInvite();showT('✓ Einladungs-E-Mail gesendet an '+email);}
-    else{showT('Fehler: '+(data.error||'Unbekannt'));}
-  }catch(e){c.invited=true;rCInvite();showT('✓ Creator eingeladen');}
+    if(res.ok){c.invited=true;c.invitedAt=new Date().toISOString();rCInvite();showT('✓ Einladungs-E-Mail gesendet an '+email);}
+    else showT('Fehler: '+(data.error||'Unbekannt'));
+  }catch(e){c.invited=true;c.invitedAt=new Date().toISOString();rCInvite();showT('✓ Creator eingeladen');}
 });
 G('creator-portal').querySelectorAll('.ni[id^="pni-"]').forEach(n=>{n.addEventListener('click',()=>renderPortalPage(n.id.replace('pni-','')));});
 document.addEventListener('click',e=>{if(!e.target.closest('#drop-menu')&&!e.target.closest('.dot-btn'))hideDot();if(!e.target.closest('#fp-panel')&&!e.target.closest('#fp-btn'))G('fp-panel').classList.remove('open');});
