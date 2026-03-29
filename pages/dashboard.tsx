@@ -2,47 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 
-export default function DashboardPage() {
-  const router = useRouter()
-  const initialized = useRef(false)
-
-  useEffect(() => {
-    // Check auth
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-    if (initialized.current) return
-    initialized.current = true
-
-    // Inject CSS
-    const style = document.createElement('style')
-    style.textContent = CSS_CONTENT
-    document.head.appendChild(style)
-
-    // Run app JS
-    const script = document.createElement('script')
-    script.textContent = JS_CONTENT
-    document.body.appendChild(script)
-
-    return () => {
-      try {
-        document.head.removeChild(style)
-        document.body.removeChild(script)
-      } catch(e) {}
-    }
-  }, [])
-
-  return (
-    <>
-      <Head><title>CreatorHub Dashboard</title></Head>
-      <div dangerouslySetInnerHTML={{ __html: HTML_CONTENT }} />
-    </>
-  )
-}
-
-const CSS_CONTENT = `
+const CSS = `
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{--bdr:#e8e8ec;--bg:#f4f5f7;--surf:#fff;--lt:#f4f5f7;--act:#f0f0f3;--muted:#777;--blue:#4f6ef7;--grn:#16a34a;--red:#dc2626;--org:#ea580c;}
 body{font-family:system-ui,sans-serif;font-size:13px;background:var(--bg);color:#111;display:flex;min-height:100vh;}
@@ -301,7 +261,7 @@ body.dark .search-inp{color:#f0f0f0;}
 .divider{height:1px;background:var(--bdr);margin:10px 0;}
 `
 
-const HTML_CONTENT = `
+const HTML = `
 
 <!-- ADMIN SIDEBAR -->
 <div class="sb" id="admin-sb">
@@ -616,7 +576,7 @@ const HTML_CONTENT = `
 
 `
 
-const JS_CONTENT = `
+const JS = `
 const G=id=>document.getElementById(id);
 const CL=['#6366f1','#ec4899','#06b6d4','#f97316','#84cc16','#f43f5e','#8b5cf6','#10b981'];
 const FL={DE:'🇩🇪',AT:'🇦🇹',CH:'🇨🇭',US:'🇺🇸',GB:'🇬🇧'};
@@ -1792,3 +1752,42 @@ function portalNewFolder(){
 
 go('dashboard');rFP();
 `
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const ref = useRef<HTMLDivElement>(null)
+  const ready = useRef(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) { router.push('/login'); return }
+    if (ready.current) return
+    ready.current = true
+
+    const el = ref.current
+    if (!el) return
+
+    el.innerHTML = HTML
+
+    const st = document.createElement('style')
+    st.textContent = CSS
+    document.head.appendChild(st)
+
+    try {
+      const fn = new Function(JS)
+      fn()
+    } catch(e) { console.error(e) }
+
+    return () => { try { document.head.removeChild(st) } catch(e){} }
+  }, [])
+
+  return (
+    <>
+      <Head>
+        <title>CreatorHub</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      <div ref={ref} />
+    </>
+  )
+}
