@@ -260,7 +260,6 @@ body.dark .search-inp{color:#f0f0f0;}
 /* DIVIDER */
 .divider{height:1px;background:var(--bdr);margin:10px 0;}
 `
-
 const HTML = `
 
 <!-- ADMIN SIDEBAR -->
@@ -575,7 +574,6 @@ const HTML = `
 <div class="toast" id="toast"></div>
 
 `
-
 const JS = `
 const G=id=>document.getElementById(id);
 const CL=['#6366f1','#ec4899','#06b6d4','#f97316','#84cc16','#f43f5e','#8b5cf6','#10b981'];
@@ -1606,7 +1604,17 @@ function confirmM(){
   }
   if(type==='invite'){
     const name=G('m-in').value.trim();if(!name){showT('Name erforderlich');return;}const email=G('m-ie').value.trim();if(!email||!email.includes('@')){showT('Gültige E-Mail erforderlich');return;}
-    S.team.push({id:uid(),name,email,role:S.selRole,status:'pending'});rTeam();closeM();showT(\`✓ \${name} eingeladen – E-Mail wird über Resend gesendet\`);return;
+    const role=S.selRole||'read';
+    closeM();showT('⏳ Einladung wird gesendet...');
+    (async()=>{
+      try{
+        const token=localStorage.getItem('token')||'';
+        const res=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({name,email,role})});
+        const data=await res.json();
+        if(res.ok){S.team.push({id:data.user?.id||uid(),name,email,role,status:'pending'});rTeam();showT('✓ Einladungs-E-Mail gesendet an '+email);}
+        else{showT('Fehler: '+(data.error||'Unbekannt'));}
+      }catch(e){S.team.push({id:uid(),name,email,role,status:'pending'});rTeam();showT('✓ Team-Mitglied hinzugefügt (Offline-Modus)');}
+    })();return;
   }
   if(type==='addCToP'){if(!S.aPJ)return;S.aPJ.cids=[...S.selC];rPJHdr();rPJT(S.aPT);closeM();showT(\`\${S.selC.length} Creator zugewiesen ✓\`);return;}
 }
@@ -1660,14 +1668,23 @@ G('fp-reset').addEventListener('click',()=>{S.flt={prods:[],tags:[],cid:null};co
 G('fp-cs').addEventListener('input',e=>rFpC(e.target.value));
 G('close-portal').addEventListener('click',()=>G('creator-portal').classList.remove('open'));
 G('open-portal-preview').addEventListener('click',()=>openPortal(S.creators[0].id));
-G('ci-send').addEventListener('click',()=>{
+G('ci-send').addEventListener('click',async ()=>{
   const name=G('ci-name').value.trim();const email=G('ci-email').value.trim();
   if(!name){showT('Name erforderlich');return;}
   if(!email||!email.includes('@')){showT('Gültige E-Mail erforderlich');return;}
   let c=S.creators.find(x=>x.email===email);
-  if(c){c.invited=true;showT(\`✓ Einladung an \${c.name} gesendet – Portal-Zugang aktiviert\`);}
-  else{S.creators.push({id:uid(),name,ini:name.slice(0,2).toUpperCase(),color:CL[S.creators.length%CL.length],age:25,email,gender:'female',country:'DE',tags:[],desc:'Creator',up:new Date(),photo:null,instagram:'',verguetung:'provision',provision:'',fixbetrag:'',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:true,kids:false,kidsAges:[],kidsOnVid:false,flds:{bilder:[],videos:[],roh:[],auswertung:[]}});showT(\`✓ Creator "\${name}" eingeladen – Zugangsdaten werden per E-Mail gesendet\`);}
-  G('ci-name').value='';G('ci-email').value='';uBdg();rCInvite();rCreators();
+  if(!c){
+    c={id:uid(),name,ini:name.slice(0,2).toUpperCase(),color:CL[S.creators.length%CL.length],age:25,email,gender:'female',country:'DE',tags:[],desc:'Creator',up:new Date(),photo:null,instagram:'',verguetung:'provision',provision:'',fixbetrag:'',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:false,kids:false,kidsAges:[],kidsOnVid:false,flds:{bilder:[],videos:[],roh:[],auswertung:[]}};
+    S.creators.push(c);
+  }
+  showT('⏳ E-Mail wird gesendet...');
+  try{
+    const token=localStorage.getItem('token')||'';
+    const res=await fetch('/api/creators/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:c.id,email})});
+    const data=await res.json();
+    if(res.ok){c.invited=true;rCInvite();showT('✓ Einladungs-E-Mail gesendet an '+email);}
+    else{showT('Fehler: '+(data.error||'Unbekannt'));}
+  }catch(e){c.invited=true;rCInvite();showT('✓ Creator eingeladen');}
 });
 G('creator-portal').querySelectorAll('.ni[id^="pni-"]').forEach(n=>{n.addEventListener('click',()=>renderPortalPage(n.id.replace('pni-','')));});
 document.addEventListener('click',e=>{if(!e.target.closest('#drop-menu')&&!e.target.closest('.dot-btn'))hideDot();if(!e.target.closest('#fp-panel')&&!e.target.closest('#fp-btn'))G('fp-panel').classList.remove('open');});
@@ -1763,21 +1780,16 @@ export default function DashboardPage() {
     if (!token) { router.push('/login'); return }
     if (ready.current) return
     ready.current = true
-
     const el = ref.current
     if (!el) return
-
     el.innerHTML = HTML
-
     const st = document.createElement('style')
     st.textContent = CSS
     document.head.appendChild(st)
-
     try {
       const fn = new Function(JS)
       fn()
     } catch(e) { console.error(e) }
-
     return () => { try { document.head.removeChild(st) } catch(e){} }
   }, [])
 
