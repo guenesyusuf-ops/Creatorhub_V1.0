@@ -14,17 +14,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq('email', email.toLowerCase())
     .single()
 
+  console.log('USER_FOUND:', !!user, 'ERROR:', error?.message)
+
   if (error || !user) return res.status(401).json({ error: 'E-Mail oder Passwort falsch' })
 
   const valid = await comparePassword(password, user.password_hash)
+  console.log('PASSWORD_VALID:', valid)
+
   if (!valid) return res.status(401).json({ error: 'E-Mail oder Passwort falsch' })
 
-  if (user.status === 'pending') {
-    await supabase.from('users').update({ status: 'active' }).eq('id', user.id)
-  }
-
   const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name })
-
   return res.status(200).json({
     token,
     user: { id: user.id, name: user.name, email: user.email, role: user.role, must_change_password: user.must_change_password }
