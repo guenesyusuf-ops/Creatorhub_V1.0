@@ -408,9 +408,16 @@ const HTML = `
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     <div class="sc" style="padding:18px">
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">✉️ Einladung senden</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Creator erhält eine E-Mail mit Zugangsdaten und kann sich einloggen, sein Profil anlegen und Inhalte hochladen.</div>
-      <div class="fg"><label class="fl">Name des Creators</label><input class="fi" id="ci-name" placeholder="Mira Hartley"></div>
-      <div class="fg"><label class="fl">E-Mail *</label><input class="fi" id="ci-email" type="email" placeholder="creator@email.com"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Wähle einen Creator aus der Liste und sende eine Einladungs-E-Mail. Der Creator kann sich danach im Creator-Portal einloggen.</div>
+      <div class="fg">
+        <label class="fl">Creator auswählen *</label>
+        <select class="fi" id="ci-sel"><option value="">– Creator wählen –</option></select>
+      </div>
+      <div class="fg" id="ci-email-wrap" style="display:none">
+        <label class="fl">E-Mail (nicht hinterlegt – bitte eingeben)</label>
+        <input class="fi" id="ci-email" type="email" placeholder="creator@email.com">
+      </div>
+      <div id="ci-preview" style="display:none;background:var(--lt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6"></div>
       <div class="fg"><label class="fl">Produkt zuweisen (optional)</label><select class="fi" id="ci-prod"><option value="">– Kein Produkt –</option></select></div>
       <button class="btn btn-p" style="width:100%" id="ci-send">Einladung senden →</button>
     </div>
@@ -1218,6 +1225,24 @@ function rTeam(){
 
 // ── CREATOR EINLADEN ──────────────────────────────────────────────────────
 function rCInvite(){
+  // Fill creator dropdown - only non-invited creators
+  const notInvited=S.creators.filter(c=>!c.invited);
+  G('ci-sel').innerHTML=\`<option value="">– Creator wählen –</option>\`+notInvited.map(c=>\`<option value="\${c.id}">\${c.name}\${c.email?' ('+c.email+')':''}</option>\`).join('');
+  // Creator select handler
+  G('ci-sel').onchange=function(){
+    const cid=+this.value;
+    const c=S.creators.find(x=>x.id===cid);
+    if(c){
+      const wrap=G('ci-email-wrap'),prev=G('ci-preview');
+      if(c.email){wrap.style.display='none';G('ci-email').value=c.email;}
+      else{wrap.style.display='block';G('ci-email').value='';}
+      prev.style.display='block';
+      prev.innerHTML=\`<strong>\${c.name}</strong>\${c.email?'<br>📧 '+c.email:''}<br>🏷️ \${c.tags.join(', ')||'Keine Tags'}\`;
+    } else {
+      G('ci-email-wrap').style.display='none';
+      G('ci-preview').style.display='none';
+    }
+  };
   // Fill produkte dropdown
   G('ci-prod').innerHTML=\`<option value="">– Kein Produkt –</option>\`+S.produkte.map(p=>\`<option value="\${p.id}">\${p.name}</option>\`).join('');
   // Invited list with date, status, last login
@@ -1690,20 +1715,19 @@ G('fp-cs').addEventListener('input',e=>rFpC(e.target.value));
 G('close-portal').addEventListener('click',()=>G('creator-portal').classList.remove('open'));
 G('open-portal-preview').addEventListener('click',()=>openPortal(S.creators[0].id));
 G('ci-send').addEventListener('click',async ()=>{
-  const name=G('ci-name').value.trim();const email=G('ci-email').value.trim();
-  if(!name){showT('Name erforderlich');return;}
+  const cid=+G('ci-sel').value;
+  if(!cid){showT('Bitte einen Creator auswählen');return;}
+  const c=S.creators.find(x=>x.id===cid);
+  if(!c){showT('Creator nicht gefunden');return;}
+  const email=c.email||G('ci-email').value.trim();
   if(!email||!email.includes('@')){showT('Gültige E-Mail erforderlich');return;}
-  let c=S.creators.find(x=>x.email===email);
-  if(!c){
-    c={id:uid(),name,ini:name.slice(0,2).toUpperCase(),color:CL[S.creators.length%CL.length],age:25,email,gender:'female',country:'DE',tags:[],desc:'Creator',up:new Date(),photo:null,instagram:'',verguetung:'provision',provision:'',fixbetrag:'',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:false,invitedAt:null,lastLogin:null,kids:false,kidsAges:[],kidsOnVid:false,flds:{bilder:[],videos:[],roh:[],auswertung:[]}};
-    S.creators.push(c);
-  }
+  if(!c.email)c.email=email;
   showT('⏳ E-Mail wird gesendet...');
   try{
     const token=localStorage.getItem('token')||'';
-    const res=await fetch('/api/creators/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:c.id,email})});
+    const res=await fetch('/api/creators/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:c.id,email,name:c.name})});
     const data=await res.json();
-    if(res.ok){c.invited=true;c.invitedAt=new Date().toISOString();rCInvite();showT('✓ Einladungs-E-Mail gesendet an '+email);}
+    if(res.ok){c.invited=true;c.invitedAt=new Date().toISOString();G('ci-sel').value='';G('ci-preview').style.display='none';G('ci-email-wrap').style.display='none';rCInvite();showT('✓ Einladungs-E-Mail gesendet an '+email);}
     else showT('Fehler: '+(data.error||'Unbekannt'));
   }catch(e){c.invited=true;c.invitedAt=new Date().toISOString();rCInvite();showT('✓ Creator eingeladen');}
 });
