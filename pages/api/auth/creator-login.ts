@@ -8,15 +8,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { code } = req.body
   if (!code) return res.status(400).json({ error: 'Code fehlt' })
 
+  // First try: find in creators table by invite_code
   const { data: creator } = await supabase
     .from('creators')
-    .select('*, categories(name)')
+    .select('*')
     .eq('invite_code', code.trim().toUpperCase())
     .single()
 
-  if (!creator) return res.status(401).json({ error: 'Ungültiger Code' })
+  if (!creator) return res.status(401).json({ error: 'Ungültiger Code. Bitte prüfe deinen Einladungscode.' })
 
-  const token = signToken({ id: creator.user_id || creator.id, role: 'creator', name: creator.name, creator_id: creator.id })
+  // Update last login
+  await supabase.from('creators').update({ last_login: new Date().toISOString() }).eq('id', creator.id)
+
+  const token = signToken({ 
+    id: creator.id, 
+    role: 'creator', 
+    name: creator.name, 
+    creator_id: creator.id 
+  })
 
   return res.status(200).json({ token, creator })
 }
