@@ -281,28 +281,36 @@ body.dark .search-inp{color:#f0f0f0;}
 .ch-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
 
 
-/* Creator-only mode: hide all admin elements */
+/* Creator mode: applied immediately, before JS runs */
+body.creator-mode { background: #f0f0f5; }
 body.creator-mode #admin-sb,
 body.creator-mode .main,
-body.creator-mode .sb-overlay {
-  display: none !important;
-}
-body.creator-mode .creator-portal {
+body.creator-mode .sb-overlay,
+body.creator-mode .topbar { display: none !important; }
+/* Show portal fullscreen */
+body.creator-mode #creator-portal {
   display: flex !important;
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
+  inset: 0 !important;
   z-index: 9999 !important;
   width: 100vw !important;
   height: 100vh !important;
 }
-body.creator-mode {
-  overflow: hidden;
+/* Loading overlay */
+#creator-loading {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #f0f0f5;
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  font-family: system-ui, sans-serif;
 }
+#creator-loading.show { display: flex; }
 `
-
 const HTML = `
 
 <!-- ADMIN SIDEBAR -->
@@ -639,7 +647,6 @@ const HTML = `
 <div class="toast" id="toast"></div>
 
 `
-
 const JS = `
 const G=id=>document.getElementById(id);
 const CL=['#6366f1','#ec4899','#06b6d4','#f97316','#84cc16','#f43f5e','#8b5cf6','#10b981'];
@@ -2069,76 +2076,141 @@ export default function CreatorPortalPage() {
   const ready = useRef(false)
 
   useEffect(() => {
-    const creatorToken = localStorage.getItem('creator_token')
-    if (!creatorToken) {
-      router.push('/creator')
-      return
-    }
+    if (!router.isReady) return
     if (ready.current) return
     ready.current = true
 
     const el = ref.current
     if (!el) return
 
-    // Inject full app HTML
-    el.innerHTML = HTML
+    // Step 1: show loading overlay immediately — no blank screen ever
+    const loadingEl = document.getElementById('creator-loading')
+    if (loadingEl) loadingEl.classList.add('show')
 
-    // Inject CSS
+    // Step 2: apply creator-mode to body immediately — hides admin UI before JS runs
+    document.body.classList.add('creator-mode')
+
+    // Step 3: inject full app HTML + CSS
+    el.innerHTML = HTML
     const st = document.createElement('style')
     st.textContent = CSS
     document.head.appendChild(st)
 
-    try {
-      // Run the app JS
-      const fn = new Function(JS)
-      fn()
+    // Step 4: determine auth source
+    const urlCode = (router.query.code as string) || ''
+    const existingToken = localStorage.getItem('creator_token')
+    const existingCreator = localStorage.getItem('creator')
 
-      setTimeout(() => {
-        const w = window as any
-        // Add creator-mode class to hide admin UI
-        document.body.classList.add('creator-mode')
+    async function initPortal(creatorData: any) {
+      try {
+        const fn = new Function(JS)
+        fn()
+      } catch(e) { console.error('JS init error:', e) }
 
-        // Get creator from localStorage
-        const creatorData = localStorage.getItem('creator')
-        if (!creatorData) { router.push('/creator'); return }
-        const creator = JSON.parse(creatorData)
+      // Wait for DOM to be ready
+      await new Promise(r => setTimeout(r, 200))
 
-        if (w.S && w.openPortal) {
-          // Add creator to S if not exists
-          if (!w.S.creators.find((c: any) => String(c.id) === String(creator.id))) {
-            w.S.creators.push({
-              id: creator.id,
-              name: creator.name || 'Creator',
-              ini: (creator.initials || creator.name?.slice(0,2) || 'CR').toUpperCase(),
-              color: '#7c3aed',
-              email: creator.email || '',
-              tags: [],
-              flds: { bilder: [], videos: [], roh: [], auswertung: [] },
-              notizenCreator: '',
-              invited: true
-            })
+      const w = window as any
+      const portalEl = document.getElementById('creator-portal')
+
+      if (!portalEl || !w.S || !w.openPortal) {
+        console.error('Portal not initialized')
+        if (loadingEl) loadingEl.classList.remove('show')
+        router.replace('/creator')
+        return
+      }
+
+      // Add creator to S.creators if not already there
+      const cid = creatorData.id
+      if (!w.S.creators.find((c: any) => String(c.id) === String(cid))) {
+        w.S.creators.push({
+          id: cid,
+          name: creatorData.name || 'Creator',
+          ini: (creatorData.initials || creatorData.name?.slice(0, 2) || 'CR').toUpperCase(),
+          color: '#7c3aed',
+          email: creatorData.email || '',
+          tags: [],
+          flds: { bilder: [], videos: [], roh: [], auswertung: [] },
+          notizenCreator: '',
+          invited: true
+        })
+      }
+
+      // Open portal — this adds .open class to #creator-portal
+      w.openPortal(cid)
+
+      // Hide close button (creator has nowhere to go back to)
+      const closeBtn = document.getElementById('close-portal')
+      if (closeBtn) closeBtn.style.display = 'none'
+
+      // Override logout button
+      const logoutBtn = document.getElementById('portal-logout-btn')
+      if (logoutBtn) {
+        logoutBtn.onclick = (e: any) => {
+          e.stopPropagation()
+          if (confirm('Wirklich abmelden?')) {
+            localStorage.removeItem('creator_token')
+            localStorage.removeItem('creator')
+            window.location.href = '/creator'
           }
-          // Open portal directly
-          w.openPortal(creator.id)
-
-          // Override portal logout to go to /creator
-          const logoutBtn = document.getElementById('portal-logout-btn')
-          if (logoutBtn) {
-            logoutBtn.onclick = () => {
-              localStorage.removeItem('creator_token')
-              localStorage.removeItem('creator')
-              window.location.href = '/creator'
-            }
-          }
-          // Hide the 'Portal schließen' button - creator has nowhere to go back to
-          const closeBtn = document.getElementById('close-portal')
-          if (closeBtn) closeBtn.style.display = 'none'
         }
-      }, 200)
-    } catch(e) { console.error('Portal error:', e) }
+      }
 
-    return () => { try { document.head.removeChild(st) } catch(e){} }
-  }, [])
+      // Hide loading overlay
+      if (loadingEl) loadingEl.classList.remove('show')
+    }
+
+    async function loginWithCode(code: string) {
+      try {
+        const res = await fetch('/api/auth/creator-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code.trim().toUpperCase() })
+        })
+        const data = await res.json()
+        if (!res.ok || !data.creator) {
+          // Invalid code
+          if (loadingEl) loadingEl.classList.remove('show')
+          router.replace('/creator?error=invalid')
+          return
+        }
+        // Store session
+        localStorage.setItem('creator_token', data.token)
+        localStorage.setItem('creator', JSON.stringify(data.creator))
+        await initPortal(data.creator)
+      } catch(e) {
+        console.error('Login error:', e)
+        if (loadingEl) loadingEl.classList.remove('show')
+        router.replace('/creator?error=connection')
+      }
+    }
+
+    // Step 5: decide auth path
+    if (urlCode) {
+      // Email link with code → authenticate via API
+      loginWithCode(urlCode)
+    } else if (existingToken && existingCreator) {
+      // Already logged in → open portal directly
+      try {
+        const creator = JSON.parse(existingCreator)
+        initPortal(creator)
+      } catch {
+        localStorage.removeItem('creator_token')
+        localStorage.removeItem('creator')
+        if (loadingEl) loadingEl.classList.remove('show')
+        router.replace('/creator')
+      }
+    } else {
+      // No code, no session → redirect to login
+      if (loadingEl) loadingEl.classList.remove('show')
+      router.replace('/creator')
+    }
+
+    return () => {
+      try { document.head.removeChild(st) } catch(e) {}
+      document.body.classList.remove('creator-mode')
+    }
+  }, [router.isReady, router.query.code])
 
   return (
     <>
@@ -2146,6 +2218,14 @@ export default function CreatorPortalPage() {
         <title>Creator Portal – Filapen</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
+      {/* Loading overlay — shown immediately, never blank */}
+      <div id="creator-loading">
+        <div style={{ fontSize: 32 }}>⏳</div>
+        <div style={{ fontFamily: 'system-ui', fontSize: 14, color: '#888' }}>
+          Creator Portal wird geladen...
+        </div>
+      </div>
+      {/* App container */}
       <div ref={ref} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
     </>
   )
