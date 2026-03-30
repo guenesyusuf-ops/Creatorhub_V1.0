@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 
-// ── Types ────────────────────────────────────────────────────────────────────
 type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error'
 
 const PORTAL_CSS = `
@@ -284,7 +283,6 @@ body.dark .search-inp{color:#f0f0f0;}
 .ch-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
 `
 
-// Only portal HTML — no admin sidebar, no admin dashboard, no admin login
 const PORTAL_HTML = `<div class="portal" id="creator-portal">
   <div class="portal-topbar">
     <div style="font-size:14px;font-weight:700">🎨 Creator Portal</div>
@@ -313,10 +311,16 @@ const PORTAL_HTML = `<div class="portal" id="creator-portal">
     <div class="portal-main" id="portal-main"></div>
   </div>
 </div>
-<div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn" id="confirm-cancel">Abbrechen</button>
-      <button class="btn btn-red" id="confirm-ok">Löschen</button>
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-t" id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div class="modal-acts">
+      <button class="btn" id="modal-cancel">Abbrechen</button>
+      <button class="btn btn-p" id="modal-ok">Speichern</button>
     </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="lb" id="lb">
   <div class="lb-x" id="lb-x">✕</div>
@@ -339,7 +343,8 @@ const PORTAL_HTML = `<div class="portal" id="creator-portal">
       <button class="lb-btn" id="lb-comment-send" style="flex-shrink:0;font-size:11px">Senden</button>
     </div>
   </div>
-</div>`
+</div>
+`
 
 const APP_JS = `
 const G=id=>document.getElementById(id);
@@ -1734,7 +1739,7 @@ function openChModal(item){
   G('modal-bg').classList.add('open');
 }
 
-go('dashboard');rFP();
+if(document.getElementById('pg-dashboard')){go('dashboard');rFP();}
 // Mobile sidebar toggle
 G('menu-toggle')?.addEventListener('click',()=>{
   G('admin-sb').classList.toggle('open');
@@ -1764,7 +1769,6 @@ G('portal-logout-btn')?.addEventListener('click',()=>{
 });
 `
 
-// ── Loading Screen ────────────────────────────────────────────────────────────
 function LoadingScreen() {
   return (
     <div style={{
@@ -1779,7 +1783,6 @@ function LoadingScreen() {
   )
 }
 
-// ── Error Screen ──────────────────────────────────────────────────────────────
 function ErrorScreen({ onRetry }: { onRetry: () => void }) {
   return (
     <div style={{
@@ -1800,13 +1803,10 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
           Dein Zugangslink ist ungültig oder abgelaufen.
           Bitte fordere einen neuen Link bei deinem Filapen-Team an.
         </p>
-        <button
-          onClick={onRetry}
-          style={{
-            width: '100%', background: '#111', color: '#fff', fontWeight: 600,
-            fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer'
-          }}
-        >
+        <button onClick={onRetry} style={{
+          width: '100%', background: '#111', color: '#fff', fontWeight: 600,
+          fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer'
+        }}>
           Neuen Link anfordern
         </button>
         <div style={{ fontSize: 12, color: '#ccc', marginTop: 24 }}>
@@ -1817,7 +1817,6 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function CreatorPortalPage() {
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -1825,35 +1824,45 @@ export default function CreatorPortalPage() {
   const [creatorData, setCreatorData] = useState<any>(null)
   const jsInitialized = useRef(false)
   const styleRef = useRef<HTMLStyleElement | null>(null)
+  const authInitialized = useRef(false)
 
-  // ── Step 1: Auth check (runs once router is ready) ─────────────────────────
+  // Step 1: Auth check
   useEffect(() => {
     if (!router.isReady) return
+    // Guard: auth init runs exactly once per page load
+    if (authInitialized.current) return
+    authInitialized.current = true
 
     const urlCode = router.query.code as string
     const storedToken = localStorage.getItem('creator_token')
     const storedCreator = localStorage.getItem('creator')
 
+    console.log('[CreatorPortal] Auth init:', {
+      urlCode: urlCode || 'none',
+      hasStoredToken: !!storedToken,
+      hasStoredCreator: !!storedCreator
+    })
+
     if (urlCode) {
-      // Email link with code → verify via API
+      console.log('[CreatorPortal] Magic link detected, verifying code...')
       verifyCode(urlCode)
     } else if (storedToken && storedCreator) {
-      // Existing valid session
+      console.log('[CreatorPortal] Existing session found, restoring...')
       try {
         const creator = JSON.parse(storedCreator)
+        console.log('[CreatorPortal] Session restored for:', creator.name)
         setCreatorData(creator)
         setAuthState('auth_ready')
-        // Clean URL
-        router.replace('/creator-portal', undefined, { shallow: true })
-      } catch {
+      } catch(e) {
+        console.error('[CreatorPortal] Session parse failed:', e)
         clearSession()
         setAuthState('error')
       }
     } else {
-      // No code, no session
+      console.log('[CreatorPortal] No code, no session → error state')
       setAuthState('error')
     }
-  }, [router.isReady, router.query.code])
+  }, [router.isReady])
 
   async function verifyCode(code: string) {
     try {
@@ -1864,16 +1873,23 @@ export default function CreatorPortalPage() {
       })
       const data = await res.json()
       if (!res.ok || !data.creator) {
+        console.error('[CreatorPortal] Code verification failed:', data.error)
         setAuthState('error')
         return
       }
+      // Store session FIRST before any state changes or navigation
       localStorage.setItem('creator_token', data.token)
       localStorage.setItem('creator', JSON.stringify(data.creator))
+      console.log('[CreatorPortal] Token stored:', !!localStorage.getItem('creator_token'))
+      console.log('[CreatorPortal] Creator stored:', !!localStorage.getItem('creator'))
+      console.log('[CreatorPortal] Creator name:', data.creator.name)
+      // Set state - triggers portal init
       setCreatorData(data.creator)
       setAuthState('auth_ready')
-      // Remove code from URL
+      // Clean URL AFTER session is stored - shallow so no re-render
       router.replace('/creator-portal', undefined, { shallow: true })
-    } catch {
+    } catch(e) {
+      console.error('[CreatorPortal] verifyCode exception:', e)
       setAuthState('error')
     }
   }
@@ -1883,7 +1899,7 @@ export default function CreatorPortalPage() {
     localStorage.removeItem('creator')
   }
 
-  // ── Step 2: Mount portal HTML + JS (only after auth is confirmed) ───────────
+  // Step 2: Mount portal only after auth confirmed
   useEffect(() => {
     if (authState !== 'auth_ready') return
     if (!creatorData) return
@@ -1898,20 +1914,67 @@ export default function CreatorPortalPage() {
     document.head.appendChild(styleEl)
     styleRef.current = styleEl
 
-    // Inject ONLY portal HTML (no admin UI at all)
+    // Inject ONLY portal HTML — no admin elements
     containerRef.current.innerHTML = PORTAL_HTML
 
-    // Run app JS
+    // ── Safe G() replacement ────────────────────────────────────────────
+    // Replace G() with a null-safe proxy that never throws on missing elements.
+    // This handles ALL 257+ G() calls in the app JS without patching each one.
+    // Admin DOM elements simply don't exist here — any access is a no-op.
+    const NULL_PROXY: any = new Proxy({}, {
+      get: () => NULL_PROXY,
+      set: () => true,
+      apply: () => NULL_PROXY,
+    })
+
+    // Preamble: override G() and admin init calls
+    // G() returns NULL_PROXY for missing elements instead of null
+    // Admin init functions become no-ops
+    // window.__isCreatorRoute prevents admin startup paths from running
+    const CREATOR_PREAMBLE = `
+const __nullProxy = new Proxy({}, {
+  get: function(t,k) {
+    if (k === 'addEventListener' || k === 'removeEventListener') return function(){};
+    if (k === 'classList') return {add:function(){},remove:function(){},toggle:function(){},contains:function(){return false}};
+    if (k === 'style') return new Proxy({},{set:function(){return true},get:function(){return ''}});
+    if (k === 'innerHTML' || k === 'textContent' || k === 'value') return '';
+    return __nullProxy;
+  },
+  set: function() { return true; }
+});
+const __origG = typeof G !== 'undefined' ? G : null;
+function G(id) {
+  const el = document.getElementById(id);
+  return el !== null ? el : __nullProxy;
+}
+window.__isCreatorRoute = true;
+function go(p) { window.__portalPage = p; }
+function rFP() {}
+function rDash() {}
+function rCreators() {}
+function showCL() {}
+function rTeam() {}
+function rKat() {}
+function rProdukte() {}
+function rProjekte() {}
+function showPJL() {}
+function showKL() {}
+function uBdg() {}
+`
+
+    // Run: preamble first, then full APP_JS
+    // The preamble overrides G() and admin init functions
+    // openPortal() defined later in APP_JS is NOT overridden — works correctly
     try {
-      const fn = new Function(APP_JS)
+      const fn = new Function(CREATOR_PREAMBLE + APP_JS)
       fn()
     } catch(e) {
-      console.error('Portal JS error:', e)
+      // Log but never show ErrorScreen for non-auth JS issues
+      console.warn('[CreatorPortal] Non-critical init warning:', e instanceof Error ? e.message : String(e))
+      // Continue — openPortal() may still be available
     }
 
-    // ── Step 3: Initialize portal data and open it ───────────────────────────
-    // Poll until portal DOM element exists — explicit readiness check
-    // No rAF, no setTimeout — deterministic
+    // Step 3: Wait until portal DOM is ready, then open it
     function waitForPortalDom(attempts: number) {
       const portalEl = document.getElementById('creator-portal')
       if (!portalEl) {
@@ -1923,73 +1986,74 @@ export default function CreatorPortalPage() {
         requestAnimationFrame(() => waitForPortalDom(attempts + 1))
         return
       }
-      // Portal DOM exists — proceed
       initPortalAfterDom()
     }
+
     function initPortalAfterDom() {
-        const w = window as any
+      const w = window as any
 
-        if (!w.S || !w.openPortal) {
-          console.error('Portal functions not available')
-          setAuthState('error')
-          return
-        }
+      if (!w.S || !w.openPortal) {
+        console.error('Portal functions not initialized')
+        setAuthState('error')
+        return
+      }
 
-        // Add creator to S.creators
-        const cid = creatorData.id
-        if (!w.S.creators.find((c: any) => String(c.id) === String(cid))) {
-          w.S.creators.push({
-            id: cid,
-            name: creatorData.name || 'Creator',
-            ini: (creatorData.initials || creatorData.name?.slice(0, 2) || 'CR').toUpperCase(),
-            color: '#7c3aed',
-            email: creatorData.email || '',
-            tags: [],
-            flds: { bilder: [], videos: [], roh: [], auswertung: [] },
-            notizenCreator: '',
-            invited: true
-          })
-        }
+      const cid = creatorData.id
 
-        // Open the portal — wrapped in try/catch
-        try {
-          w.openPortal(cid)
-        } catch(e) {
-          console.error('openPortal failed:', e)
-          setAuthState('error')
-          return
-        }
+      // Add creator to S.creators if not present
+      if (!w.S.creators.find((c: any) => String(c.id) === String(cid))) {
+        w.S.creators.push({
+          id: cid,
+          name: creatorData.name || 'Creator',
+          ini: (creatorData.initials || creatorData.name?.slice(0, 2) || 'CR').toUpperCase(),
+          color: '#7c3aed',
+          email: creatorData.email || '',
+          tags: [],
+          flds: { bilder: [], videos: [], roh: [], auswertung: [] },
+          notizenCreator: '',
+          invited: true
+        })
+      }
 
-        // Verify portal element is actually open after openPortal()
-        const portalEl = document.getElementById('creator-portal')
-        if (!portalEl || !portalEl.classList.contains('open')) {
-          console.error('Portal did not open')
-          setAuthState('error')
-          return
-        }
+      // Call openPortal
+      try {
+        w.openPortal(cid)
+      } catch(e) {
+        console.error('openPortal failed:', e)
+        setAuthState('error')
+        return
+      }
 
-        // Hide close button
-        const closeBtn = document.getElementById('close-portal')
-        if (closeBtn) closeBtn.style.display = 'none'
+      // Verify portal actually opened
+      const portalEl = document.getElementById('creator-portal')
+      if (!portalEl || !portalEl.classList.contains('open')) {
+        console.error('Portal did not open correctly')
+        setAuthState('error')
+        return
+      }
 
-        // Override logout
-        const logoutBtn = document.getElementById('portal-logout-btn')
-        if (logoutBtn) {
-          logoutBtn.onclick = (e: Event) => {
-            e.stopPropagation()
-            if (confirm('Wirklich abmelden?')) {
-              clearSession()
-              window.location.href = '/creator'
-            }
+      // Hide admin-only buttons
+      const closeBtn = document.getElementById('close-portal')
+      if (closeBtn) closeBtn.style.display = 'none'
+
+      // Override logout
+      const logoutBtn = document.getElementById('portal-logout-btn')
+      if (logoutBtn) {
+        logoutBtn.onclick = (e: Event) => {
+          e.stopPropagation()
+          if (confirm('Wirklich abmelden?')) {
+            clearSession()
+            window.location.href = '/creator'
           }
         }
-
-        // All checks passed — portal is confirmed ready
-        setAuthState('portal_ready')
       }
+
+      // All verified — show portal
+      setAuthState('portal_ready')
+    }
+
     waitForPortalDom(0)
 
-    // Proper useEffect cleanup
     return () => {
       if (styleRef.current) {
         try { document.head.removeChild(styleRef.current) } catch {}
@@ -1998,7 +2062,6 @@ export default function CreatorPortalPage() {
     }
   }, [authState, creatorData])
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <Head>
@@ -2006,15 +2069,9 @@ export default function CreatorPortalPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      {/* Loading: shown during checking and auth_ready (before portal mounts) */}
       {(authState === 'checking' || authState === 'auth_ready') && <LoadingScreen />}
+      {authState === 'error' && <ErrorScreen onRetry={() => { window.location.href = '/creator' }} />}
 
-      {/* Error */}
-      {authState === 'error' && (
-        <ErrorScreen onRetry={() => window.location.href = '/creator'} />
-      )}
-
-      {/* Portal container — always in DOM but invisible until portal_ready */}
       <div
         ref={containerRef}
         style={{
