@@ -2,61 +2,51 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 
-export default function CreatorPortal() {
+export default function CreatorLoginPage() {
   const router = useRouter()
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [autoLogging, setAutoLogging] = useState(false)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Auto-login with ?code= from URL - completely separate from admin
+    if (!router.isReady) return
+    setReady(true)
+
+    // If ?error= param exists show message
+    const err = router.query.error as string
+    if (err === 'invalid') setError('Ungültiger oder abgelaufener Link. Bitte Code manuell eingeben.')
+    if (err === 'connection') setError('Verbindungsfehler. Bitte versuche es erneut.')
+
+    // If code in URL → forward directly to creator-portal which handles auth
     const urlCode = router.query.code as string
     if (urlCode) {
-      setAutoLogging(true)
-      loginWithCode(urlCode)
+      router.replace(`/creator-portal?code=${urlCode}`)
+      return
     }
-  }, [router.query.code])
 
-  async function loginWithCode(c: string) {
-    setLoading(true); setError('')
-    try {
-      const res = await fetch('/api/auth/creator-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: c.trim().toUpperCase() })
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Ungültiger Link. Bitte fordere einen neuen Link an.')
-        setAutoLogging(false)
-        setLoading(false)
-        return
-      }
-      // Store creator session separately - admin session untouched
-      localStorage.setItem('creator_token', data.token)
-      localStorage.setItem('creator', JSON.stringify(data.creator))
-      // Creator always goes to /creator-portal - never to /dashboard
-      router.push('/creator-portal')
-    } catch {
-      setError('Verbindungsfehler. Bitte versuche es erneut.')
-      setAutoLogging(false)
+    // If already logged in → go to portal
+    const existingToken = localStorage.getItem('creator_token')
+    const existingCreator = localStorage.getItem('creator')
+    if (existingToken && existingCreator) {
+      router.replace('/creator-portal')
     }
-    setLoading(false)
-  }
+  }, [router.isReady])
 
   async function handleLogin(e: any) {
     e.preventDefault()
-    await loginWithCode(code)
+    if (!code.trim()) return
+    // Forward to creator-portal with code
+    router.push(`/creator-portal?code=${code.trim().toUpperCase()}`)
   }
 
-  if (autoLogging) return (
+  if (!ready) return (
     <>
       <Head><title>Creator Portal – Filapen</title></Head>
       <div style={s.wrap}>
         <div style={s.card}>
           <div style={s.logoSub}>CREATOR HUB</div>
-          <p style={{ textAlign: 'center', color: '#888', fontSize: 15, marginTop: 16 }}>⏳ Du wirst eingeloggt...</p>
+          <div style={{ textAlign: 'center', marginTop: 24, color: '#888', fontSize: 14 }}>⏳ Einen Moment...</div>
         </div>
       </div>
     </>
@@ -81,12 +71,13 @@ export default function CreatorPortal() {
                 onChange={e => setCode(e.target.value.toUpperCase())}
                 placeholder="XXXXXXXX"
                 maxLength={8}
+                autoFocus
                 required
               />
             </div>
             {error && <div style={s.error}>{error}</div>}
             <button style={s.btn} type="submit" disabled={loading}>
-              {loading ? 'Prüfe Code...' : 'Einloggen →'}
+              {loading ? 'Weiterleiten...' : 'Einloggen →'}
             </button>
           </form>
           <div style={s.divider}>oder</div>
