@@ -9,8 +9,8 @@ export default function CreatorPortal() {
   const [loading, setLoading] = useState(false)
   const [autoLogging, setAutoLogging] = useState(false)
 
-  // Auto-login if ?code= in URL
   useEffect(() => {
+    // Auto-login with ?code= from URL - completely separate from admin
     const urlCode = router.query.code as string
     if (urlCode) {
       setAutoLogging(true)
@@ -20,22 +20,28 @@ export default function CreatorPortal() {
 
   async function loginWithCode(c: string) {
     setLoading(true); setError('')
-    const res = await fetch('/api/auth/creator-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: c })
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.error || 'Ungültiger Link. Bitte fordere einen neuen Link an.')
+    try {
+      const res = await fetch('/api/auth/creator-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: c.trim().toUpperCase() })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Ungültiger Link. Bitte fordere einen neuen Link an.')
+        setAutoLogging(false)
+        setLoading(false)
+        return
+      }
+      // Store creator session separately - admin session untouched
+      localStorage.setItem('creator_token', data.token)
+      localStorage.setItem('creator', JSON.stringify(data.creator))
+      // Creator always goes to /creator-portal - never to /dashboard
+      router.push('/creator-portal')
+    } catch {
+      setError('Verbindungsfehler. Bitte versuche es erneut.')
       setAutoLogging(false)
-      setLoading(false)
-      return
     }
-    localStorage.setItem('creator_token', data.token)
-    localStorage.setItem('creator', JSON.stringify(data.creator))
-    // Redirect to dashboard (creator view)
-    router.push('/dashboard')
     setLoading(false)
   }
 
@@ -50,7 +56,7 @@ export default function CreatorPortal() {
       <div style={s.wrap}>
         <div style={s.card}>
           <div style={s.logoSub}>CREATOR HUB</div>
-          <p style={{ textAlign: 'center', color: '#888', fontSize: 14 }}>⏳ Du wirst eingeloggt...</p>
+          <p style={{ textAlign: 'center', color: '#888', fontSize: 15, marginTop: 16 }}>⏳ Du wirst eingeloggt...</p>
         </div>
       </div>
     </>
@@ -65,7 +71,7 @@ export default function CreatorPortal() {
             <div style={s.logoSub}>CREATOR HUB</div>
           </div>
           <h2 style={s.title}>Dein Creator Portal</h2>
-          <p style={s.sub}>Gib deinen persönlichen Einladungscode ein oder nutze den Link aus deiner E-Mail.</p>
+          <p style={s.sub}>Nutze den Link aus deiner Einladungs-E-Mail oder gib deinen Code ein.</p>
           <form onSubmit={handleLogin}>
             <div style={s.group}>
               <label style={s.label}>Einladungscode</label>
@@ -97,7 +103,7 @@ export default function CreatorPortal() {
 const s: any = {
   wrap: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f5', padding: 24 },
   card: { background: '#fff', border: '1px solid #e8e8ec', borderRadius: 20, padding: '44px 40px', width: '100%', maxWidth: 400, boxShadow: '0 2px 20px rgba(0,0,0,0.06)' },
-  logoSub: { fontSize: 10, color: '#aaa', letterSpacing: '3px', fontWeight: 600, textAlign: 'center' as const, marginBottom: 8 },
+  logoSub: { fontSize: 10, color: '#aaa', letterSpacing: '3px', fontWeight: 600, textAlign: 'center' as const },
   title: { fontSize: 22, fontWeight: 700, color: '#111', margin: '0 0 6px', textAlign: 'center' as const },
   sub: { fontSize: 13, color: '#888', margin: '0 0 24px', textAlign: 'center' as const, lineHeight: 1.6 },
   group: { marginBottom: 20 },
