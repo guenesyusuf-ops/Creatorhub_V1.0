@@ -1932,7 +1932,7 @@ export default function CreatorPortalPage() {
     // Admin init functions become no-ops
     // window.__isCreatorRoute prevents admin startup paths from running
     const CREATOR_PREAMBLE = `
-const __nullProxy = new Proxy({}, {
+var __nullProxy = new Proxy({}, {
   get: function(t,k) {
     if (k === 'addEventListener' || k === 'removeEventListener') return function(){};
     if (k === 'classList') return {add:function(){},remove:function(){},toggle:function(){},contains:function(){return false}};
@@ -1942,31 +1942,14 @@ const __nullProxy = new Proxy({}, {
   },
   set: function() { return true; }
 });
-const __origG = typeof G !== 'undefined' ? G : null;
-function G(id) {
-  const el = document.getElementById(id);
-  return el !== null ? el : __nullProxy;
-}
 window.__isCreatorRoute = true;
-function go(p) { window.__portalPage = p; }
-function rFP() {}
-function rDash() {}
-function rCreators() {}
-function showCL() {}
-function rTeam() {}
-function rKat() {}
-function rProdukte() {}
-function rProjekte() {}
-function showPJL() {}
-function showKL() {}
-function uBdg() {}
 `
 
     // Patch APP_JS: replace the unsafe G() with the safe null-proxy version
     // APP_JS starts with: const G=id=>document.getElementById(id)
     // This would overwrite our safe G() from the preamble
     // Fix: replace it in the string BEFORE running
-    const SAFE_G = `const G=function(id){var el=document.getElementById(id);return el!==null?el:__nullProxy;};`
+    const SAFE_G = `G=function(id){var el=document.getElementById(id);return el!==null?el:__nullProxy;};`
     const patchedAppJS = APP_JS.replace(
       'const G=id=>document.getElementById(id);',
       SAFE_G
