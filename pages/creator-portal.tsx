@@ -1947,6 +1947,7 @@ var __nullProxy = new Proxy({}, {
   set: function() { return true; }
 });
 window.__isCreatorRoute = true;
+var G;
 `
 
     // Execute APP_JS and explicitly expose required symbols on window
@@ -1960,12 +1961,24 @@ window.openPortalComments = typeof openPortalComments !== 'undefined' ? openPort
 window.renderPortalPage = typeof renderPortalPage !== 'undefined' ? renderPortalPage : null;
 window.showT = typeof showT !== 'undefined' ? showT : null;
 `
-    const patchedJS = APP_JS + EXPOSE_GLOBALS
+    // Patch APP_JS: replace 'const G=...' with 'G=...' to avoid re-declaration
+    // CREATOR_PREAMBLE declares 'function G()' — APP_JS has 'const G=...'
+    // 'const' after 'function' in same scope = SyntaxError
+    // Replacing with 'G=...' (reassignment) avoids the conflict
+    const safeAppJS = APP_JS.replace(
+      'const G=id=>document.getElementById(id);',
+      'G=function(id){var el=document.getElementById(id);return el!==null?el:__nullProxy;};'
+    )
+    const applied = !safeAppJS.includes('const G=id=>document.getElementById(id);')
+    console.log('[CreatorPortal] G() patch applied:', applied)
+
+    // patchedJS = PREAMBLE (safe G, nullProxy, stubs) + patched APP_JS + EXPOSE_GLOBALS
+    const patchedJS = CREATOR_PREAMBLE + safeAppJS + EXPOSE_GLOBALS
     try {
       const appFn = new Function(patchedJS)
       appFn()
     } catch(e) {
-      // Non-fatal: admin DOM init errors expected (missing admin elements)
+      // Non-fatal: some admin DOM calls may still warn
       console.warn('[CreatorPortal] APP_JS non-critical warning:', e instanceof Error ? e.message : String(e))
     }
     console.log('[CreatorPortal] window.S exists:', !!(window as any).S)
