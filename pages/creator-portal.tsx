@@ -1956,7 +1956,15 @@ window.openPortalComments = typeof openPortalComments !== 'undefined' ? openPort
 window.renderPortalPage = typeof renderPortalPage !== 'undefined' ? renderPortalPage : null;
 window.showT = typeof showT !== 'undefined' ? showT : null;
 `
-    const patchedJS = APP_JS + EXPOSE_GLOBALS
+       // Prepend CREATOR_PREAMBLE (defines __nullProxy) and replace unsafe G()
+    // with a null-safe version so admin DOM lookups silently no-op
+    // instead of throwing and aborting before EXPOSE_GLOBALS runs.
+    const safeAppJS = APP_JS.replace(
+      'const G=id=>document.getElementById(id);',
+      'const G=id=>{const el=document.getElementById(id);return el!==null?el:__nullProxy;};'
+    )
+    const patchedJS = CREATOR_PREAMBLE + safeAppJS + EXPOSE_GLOBALS
+
     try {
       const appFn = new Function(patchedJS)
       appFn()
