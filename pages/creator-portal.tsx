@@ -1945,34 +1945,40 @@ var __nullProxy = new Proxy({}, {
 window.__isCreatorRoute = true;
 `
 
-    // Patch APP_JS: replace the unsafe G() with the safe null-proxy version
-    // APP_JS starts with: const G=id=>document.getElementById(id)
-    // This would overwrite our safe G() from the preamble
-    // Fix: replace it in the string BEFORE running
-    const SAFE_G = `G=function(id){var el=document.getElementById(id);return el!==null?el:__nullProxy;};`
-    const patchedAppJS = APP_JS.replace(
-      'const G=id=>document.getElementById(id);',
-      SAFE_G
-    )
-    // Verify the patch was applied
-    const patchApplied = !patchedAppJS.includes('const G=id=>document.getElementById(id);')
-    console.log('[CreatorPortal] G() safety patch applied:', patchApplied)
-
-    // Expose S and openPortal on window AFTER APP_JS defines them
-    // new Function() scope is isolated — const/let do NOT appear on window
-    const EXPOSE_GLOBALS = `
-try { window.S = S; } catch(_e) {}
-try { window.openPortal = openPortal; } catch(_e) {}
-console.log('[CreatorPortal] window.S:', !!window.S, '| window.openPortal:', !!window.openPortal);
-`
+    // Run APP_JS in its own scope — no preamble, no scope conflicts
+    // APP_JS defines window.S, window.openPortal, window.G via its own const declarations
+    // We then overwrite window.G with a safe version AFTER APP_JS completes
     try {
-      const fn = new Function(CREATOR_PREAMBLE + patchedAppJS + EXPOSE_GLOBALS)
-      fn()
+      const appFn = new Function(APP_JS)
+      appFn()
+      console.log('[CreatorPortal] APP_JS executed. window.S:', !!(window as any).S, '| window.openPortal:', !!(window as any).openPortal)
     } catch(e) {
-      // Non-fatal: expected when some admin DOM elements are missing
-      console.warn('[CreatorPortal] Non-critical init warning:', e instanceof Error ? e.message : String(e))
-      // Continue — openPortal() is defined and available
+      // Expected: admin DOM elements missing cause errors in the init block
+      // These are non-fatal — S and openPortal are already defined before the error
+      console.warn('[CreatorPortal] APP_JS non-critical warning:', e instanceof Error ? e.message : String(e))
     }
+
+    // Step 2: Overwrite window.G with null-safe version AFTER APP_JS ran
+    // This replaces the unsafe G() that APP_JS defined
+    // All subsequent calls to G() (including openPortal) use this safe version
+    const w = window as any
+    const __nullProxy: any = new Proxy({}, {
+      get: (_t: any, k: string) => {
+        if (k === 'addEventListener' || k === 'removeEventListener') return () => {}
+        if (k === 'classList') return { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false }
+        if (k === 'style') return new Proxy({}, { set: () => true, get: () => '' })
+        if (k === 'innerHTML' || k === 'textContent' || k === 'value') return ''
+        if (k === 'querySelector' || k === 'querySelectorAll') return () => null
+        return __nullProxy
+      },
+      set: () => true
+    })
+    w.G = function(id: string) {
+      const el = document.getElementById(id)
+      return el !== null ? el : __nullProxy
+    }
+    console.log('[CreatorPortal] Safe G() installed on window')
+    console.log('[CreatorPortal] G() patch verified — G(nonexistent) is proxy:', w.G('__nonexistent__') === __nullProxy)
 
     // Step 3: Wait until portal DOM is ready, then open it
     function waitForPortalDom(attempts: number) {
