@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 
-type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error'
+type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
 
 const PORTAL_CSS = `
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -1962,16 +1962,33 @@ function showKL() {}
 function uBdg() {}
 `
 
-    // Run: preamble first, then full APP_JS
-    // The preamble overrides G() and admin init functions
-    // openPortal() defined later in APP_JS is NOT overridden — works correctly
+    // Patch APP_JS: replace the unsafe G() with the safe null-proxy version
+    // APP_JS starts with: const G=id=>document.getElementById(id)
+    // This would overwrite our safe G() from the preamble
+    // Fix: replace it in the string BEFORE running
+    const SAFE_G = `const G=function(id){var el=document.getElementById(id);return el!==null?el:__nullProxy;};`
+    const patchedAppJS = APP_JS.replace(
+      'const G=id=>document.getElementById(id);',
+      SAFE_G
+    )
+    // Verify the patch was applied
+    const patchApplied = !patchedAppJS.includes('const G=id=>document.getElementById(id);')
+    console.log('[CreatorPortal] G() safety patch applied:', patchApplied)
+
+    // Expose S and openPortal on window AFTER APP_JS defines them
+    // new Function() scope is isolated — const/let do NOT appear on window
+    const EXPOSE_GLOBALS = `
+try { window.S = S; } catch(_e) {}
+try { window.openPortal = openPortal; } catch(_e) {}
+console.log('[CreatorPortal] window.S:', !!window.S, '| window.openPortal:', !!window.openPortal);
+`
     try {
-      const fn = new Function(CREATOR_PREAMBLE + APP_JS)
+      const fn = new Function(CREATOR_PREAMBLE + patchedAppJS + EXPOSE_GLOBALS)
       fn()
     } catch(e) {
-      // Log but never show ErrorScreen for non-auth JS issues
+      // Non-fatal: expected when some admin DOM elements are missing
       console.warn('[CreatorPortal] Non-critical init warning:', e instanceof Error ? e.message : String(e))
-      // Continue — openPortal() may still be available
+      // Continue — openPortal() is defined and available
     }
 
     // Step 3: Wait until portal DOM is ready, then open it
@@ -1979,8 +1996,8 @@ function uBdg() {}
       const portalEl = document.getElementById('creator-portal')
       if (!portalEl) {
         if (attempts > 20) {
-          console.error('Portal DOM not found after 20 attempts')
-          setAuthState('error')
+          console.error('[CreatorPortal] Portal DOM not found after 20 attempts — UI error')
+          setAuthState('portal_error')
           return
         }
         requestAnimationFrame(() => waitForPortalDom(attempts + 1))
@@ -1993,8 +2010,8 @@ function uBdg() {}
       const w = window as any
 
       if (!w.S || !w.openPortal) {
-        console.error('Portal functions not initialized')
-        setAuthState('error')
+        console.error('[CreatorPortal] Portal functions not available — UI error')
+        setAuthState('portal_error')
         return
       }
 
@@ -2015,20 +2032,25 @@ function uBdg() {}
         })
       }
 
-      // Call openPortal
+      // openPortal — UI failures are NOT auth failures
+      console.log('[CreatorPortal] openPortal called, cid:', cid)
+      console.log('[CreatorPortal] portal element exists:', !!document.getElementById('creator-portal'))
       try {
         w.openPortal(cid)
+        console.log('[CreatorPortal] openPortal completed without exception')
       } catch(e) {
-        console.error('openPortal failed:', e)
-        setAuthState('error')
+        console.error('[CreatorPortal] openPortal threw (UI error, not auth):', e instanceof Error ? e.message : String(e))
+        setAuthState('portal_error')
         return
       }
 
-      // Verify portal actually opened
+      // Verify portal opened — UI error if not, NOT auth error
       const portalEl = document.getElementById('creator-portal')
-      if (!portalEl || !portalEl.classList.contains('open')) {
-        console.error('Portal did not open correctly')
-        setAuthState('error')
+      const hasOpenClass = portalEl ? portalEl.classList.contains('open') : false
+      console.log('[CreatorPortal] portal has .open class:', hasOpenClass)
+      if (!portalEl || !hasOpenClass) {
+        console.error('[CreatorPortal] Portal did not open — UI error not auth error')
+        setAuthState('portal_error')
         return
       }
 
@@ -2071,6 +2093,16 @@ function uBdg() {}
 
       {(authState === 'checking' || authState === 'auth_ready') && <LoadingScreen />}
       {authState === 'error' && <ErrorScreen onRetry={() => { window.location.href = '/creator' }} />}
+      {authState === 'portal_error' && (
+        <div style={{ minHeight: '100vh', background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
+          <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 20, padding: '44px 40px', width: '100%', maxWidth: 400, textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111', margin: '0 0 10px' }}>Portal konnte nicht geladen werden</h2>
+            <p style={{ fontSize: 14, color: '#888', lineHeight: 1.6, margin: '0 0 28px' }}>Dein Login war erfolgreich, aber das Portal konnte nicht gestartet werden. Bitte lade die Seite neu.</p>
+            <button onClick={() => window.location.reload()} style={{ width: '100%', background: '#111', color: '#fff', fontWeight: 600, fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer' }}>Seite neu laden</button>
+          </div>
+        </div>
+      )}
 
       <div
         ref={containerRef}
