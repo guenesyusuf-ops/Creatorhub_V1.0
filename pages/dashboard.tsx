@@ -276,8 +276,10 @@ body.dark .search-inp{color:#f0f0f0;}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199;}
 .menu-toggle{display:none;background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:var(--text);}
 @media(max-width:900px){.menu-toggle{display:flex;align-items:center;}}
-`
 
+.ch-card{transition:box-shadow 0.15s;}
+.ch-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+`
 const HTML = `
 
 <!-- ADMIN SIDEBAR -->
@@ -299,6 +301,7 @@ const HTML = `
   <div class="nav-s">
     <div class="nav-l">Verwaltung</div>
     <div class="ni" id="ni-team"><span class="ni-ico">👥</span>Team</div>
+    <div class="ni" id="ni-content-hub"><span class="ni-ico">📚</span>Content Hub</div>
     <div class="ni" id="ni-c-invite"><span class="ni-ico">✉️</span>Creator einladen</div>
     <div class="ni" id="ni-einst"><span class="ni-ico">⚙</span>Einstellungen</div>
   </div>
@@ -445,6 +448,22 @@ const HTML = `
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px">So sieht das Dashboard eines Creators aus:</div>
     <button class="btn btn-p" id="open-portal-preview">Creator-Portal öffnen →</button>
   </div>
+</div>
+
+<!-- CONTENT HUB -->
+<div class="pg" id="pg-content-hub">
+  <div class="ph">
+    <div class="ph-t">Content Hub</div>
+    <div style="display:flex;gap:8px">
+      <input class="fi" id="ch-search" placeholder="🔍 Suchen..." style="width:180px;padding:6px 10px;font-size:12px">
+      <button class="btn btn-p" id="ch-add-btn">+ Inhalt hinzufügen</button>
+      <button class="btn" id="ch-add-cat-btn">+ Kategorie</button>
+    </div>
+  </div>
+  <!-- Category tabs -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap" id="ch-cats"></div>
+  <!-- Content grid -->
+  <div id="ch-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
 </div>
 
 <!-- EINSTELLUNGEN -->
@@ -597,7 +616,6 @@ const HTML = `
 <div class="toast" id="toast"></div>
 
 `
-
 const JS = `
 const G=id=>document.getElementById(id);
 const CL=['#6366f1','#ec4899','#06b6d4','#f97316','#84cc16','#f43f5e','#8b5cf6','#10b981'];
@@ -697,6 +715,7 @@ function go(p){
   else if(p==='kategorien'){showKL();rKat();}
   else if(p==='team')rTeam();
   else if(p==='c-invite')rCInvite();
+  else if(p==='content-hub')rContentHub();
   else if(p==='einst'){rTags();G('dark-tgl').classList.toggle('on',S.dark);}
   uBdg();
 }
@@ -767,6 +786,35 @@ function rDash(){
   }
   G('d-creators').innerHTML=cRowsHTML(list.slice(0,5));
   attachCR(G('d-creators'));
+  // Banner: neue Creator-Uploads
+  if(!S._uploadBannerDismissed){
+    const token=localStorage.getItem('token')||'';
+    fetch('/api/uploads?creatorId=all',{headers:{'Authorization':'Bearer '+token}})
+      .then(r=>r.json()).then(uploads=>{
+        if(!Array.isArray(uploads))return;
+        const unseen=uploads.filter(u=>!u.seen_by_admin);
+        if(!unseen.length)return;
+        // Group by creator_id
+        const byCreator={};
+        unseen.forEach(u=>{if(!byCreator[u.creator_id])byCreator[u.creator_id]=[];byCreator[u.creator_id].push(u);});
+        const creatorIds=Object.keys(byCreator);
+        const names=creatorIds.map(cid=>{const c=S.creators.find(x=>String(x.id)===String(cid));return c?c.name:cid;});
+        const bannerEl=document.getElementById('upload-banner');
+        if(bannerEl)bannerEl.remove();
+        const banner=document.createElement('div');
+        banner.id='upload-banner';
+        banner.style.cssText='background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#1e40af;display:flex;align-items:flex-start;justify-content:space-between;gap:10px';
+        const msg=names.length===1?\`<strong>\${names[0]}</strong> hat neuen Content hochgeladen — bitte geh auf das Profil.\`:\`<strong>\${names.join(', ')}</strong> haben neuen Content hochgeladen.\`;
+        banner.innerHTML=\`<div>📤 \${msg}<br><span style="font-size:10px;opacity:.7">\${unseen.length} neue Datei\${unseen.length>1?'en':''}</span></div><button id="upload-banner-x" style="background:none;border:none;cursor:pointer;font-size:16px;color:#1e40af;padding:0;flex-shrink:0">✕</button>\`;
+        const af=G('af-row');if(af)af.insertAdjacentElement('afterend',banner);
+        document.getElementById('upload-banner-x')?.addEventListener('click',()=>{S._uploadBannerDismissed=true;banner.remove();});
+        // Click on banner goes to first creator profile
+        banner.querySelector('div')?.addEventListener('click',()=>{
+          const firstId=creatorIds[0];const c=S.creators.find(x=>String(x.id)===String(firstId));
+          if(c){go('creators');setTimeout(()=>openC(c.id),100);}
+        });
+      }).catch(()=>{});
+  }
 }
 
 // ── CREATOR ROWS ──────────────────────────────────────────────────────────
@@ -837,6 +885,36 @@ function openC(id){
   rCHdr();
   G('c-tabs').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   rCT('bilder');
+  const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+  fetch('/api/uploads?creatorId='+String(id),{headers:{'Authorization':'Bearer '+token}})
+    .then(r=>r.json()).then(uploads=>{
+      if(!Array.isArray(uploads))return;
+      const tabMap={'bilder':'bilder','videos':'videos','roh':'roh','auswertung':'auswertung'};
+      const newTabs=new Set();
+      uploads.forEach(u=>{
+        const tab=tabMap[u.tab]||'bilder';
+        if(!c.flds[tab])c.flds[tab]=[];
+        let fld=c.flds[tab].find(f=>f.id==='__db_uploads__');
+        if(!fld){fld={id:'__db_uploads__',name:'Uploads',batch:'Creator Upload',date:new Date().toISOString().slice(0,10),deadline:null,prods:[],tags:[],files:[]};c.flds[tab].unshift(fld);}
+        if(!fld.files.find(f=>f.id===u.id)){
+          fld.files.push({id:u.id,name:u.file_name,type:u.file_type,url:u.file_url,size:u.file_size?(u.file_size/1024/1024).toFixed(1)+' MB':'',uploadedAt:null,comments:[],r2Key:u.r2_key});
+          if(!u.seen_by_admin)newTabs.add(tab);
+        }
+      });
+      if(newTabs.size>0){
+        G('c-tabs').querySelectorAll('.tab').forEach(tabEl=>{
+          const tLabel=tabEl.textContent?.trim()||'';
+          const tKey={'🖼️ Bilder':'bilder','🎬 Videos':'videos','📹 Rohmaterial':'roh','📊 Auswertungen':'auswertung'}[tLabel]||tabEl.dataset?.t||tLabel.toLowerCase();
+          if(newTabs.has(tKey)&&!tabEl.querySelector('.new-dot')){
+            const dot=document.createElement('span');dot.className='new-dot';
+            dot.style.cssText='display:inline-block;width:7px;height:7px;background:#ef4444;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0;';
+            tabEl.appendChild(dot);
+          }
+        });
+        fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:String(id)})}).catch(()=>{});
+      }
+      rCHdr();rCT(S.aCT);
+    }).catch(()=>{});
 }
 
 function rCHdr(){
@@ -1102,7 +1180,14 @@ G('lb-comment-send').addEventListener('click',()=>{
 });
 G('lb-comment-inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G('lb-comment-send').click();}});
 
-function delFile(fid,fldId){askConfirm('Datei löschen?',()=>{for(const tab of Object.keys(S.aC.flds)){const f=S.aC.flds[tab].find(x=>x.id===fldId);if(f){f.files=f.files.filter(x=>x.id!==fid);rFiles(f);rCHdr();showT('Datei gelöscht ✓');return;}}});}
+function delFile(fid,fldId){
+  const fileObj=(()=>{for(const t of Object.keys(S.aC?.flds||{})){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){return f.files.find(x=>x.id===fid)||null;}}return null;})();
+  askConfirm('Datei löschen?',async()=>{
+    const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+    try{await fetch('/api/upload',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({uploadId:String(fid),r2Key:fileObj?.r2Key||null})});}catch(e){}
+    for(const t of Object.keys(S.aC.flds)){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){f.files=f.files.filter(x=>x.id!==fid);rFiles(f);rCHdr();showT('Datei gelöscht ✓');return;}}
+  });
+}
 function delFld(fid,tab,name){askConfirm(\`Ordner "\${name}" löschen?\`,()=>{S.aC.flds[tab]=S.aC.flds[tab].filter(f=>f.id!==fid);rCT(tab);rCHdr();showT('Ordner gelöscht ✓');});}
 function delC(id,name){askConfirm(\`Creator "\${name}" löschen?\`,()=>{S.creators=S.creators.filter(c=>c.id!==id);if(S.aC?.id===id)showCL();rCreators();uBdg();rDash();showT(\`"\${name}" gelöscht ✓\`);});}
 function backC(){S.aC=null;showCL();G('tb-t').textContent='Creator';rCreators();}
@@ -1276,14 +1361,14 @@ function rCInvite(){
     const rows=invited.map((c,i)=>{
       const invDate=c.invitedAt?new Date(c.invitedAt).toLocaleDateString('de-DE'):'-';
       const lastLogin=c.lastLogin?new Date(c.lastLogin).toLocaleDateString('de-DE'):'-';
-      const accepted=!!c.lastLogin;
+      const accepted=c.status==='aktiv'||!!c.lastLogin;
       const bb=i<invited.length-1?'border-bottom:1px solid var(--bdr);':'';
       const st=accepted?'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0':'background:#fffbeb;color:#d97706;border:1px solid #fde68a';
       return '<div style="display:grid;grid-template-columns:2fr 1fr 1.2fr 1fr auto;align-items:center;padding:8px 10px;'+bb+'gap:6px">'
         +'<div style="display:flex;align-items:center;gap:7px"><div style="width:24px;height:24px;border-radius:50%;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff">'+c.ini+'</div>'
         +'<div><div style="font-size:12px;font-weight:500">'+c.name+'</div><div style="font-size:10px;color:var(--muted)">'+( c.email||'-')+'</div></div></div>'
         +'<div style="font-size:11px">'+invDate+'</div>'
-        +'<span style="font-size:10px;border-radius:5px;padding:1px 7px;'+st+'">'+( accepted?'✓ Angenommen':'⏳ Ausstehend')+'</span>'
+        +'<span style="font-size:10px;border-radius:5px;padding:1px 7px;'+st+'">'+( accepted?'✓ Aktiv':'⏳ Ausstehend')+'</span>'
         +'<div style="font-size:11px;color:'+(accepted?'var(--text)':'var(--muted)')+'">'+lastLogin+'</div>'
         +'<div style="display:flex;gap:4px">'
         +'<button data-resend="'+c.id+'" title="Neuen Link senden" style="background:var(--lt);border:1px solid var(--bdr);border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer">🔄</button>'
@@ -1449,41 +1534,29 @@ function renderPortalPage(page){
   else if(page==='tips'||page==='briefings'||page==='skripte'||page==='videos'){
     const tipMap={briefings:'📋 Briefings',skripte:'📝 Skripte',videos:'🎬 Lernvideos'};
     if(page==='tips'){
+      const hub=S.contentHub||{cats:['Briefings','Skripte','Lernvideos'],items:[]};
+      const allCats=hub.cats;
+      const catIcons={'Briefings':'📋','Skripte':'📝','Lernvideos':'🎬'};
       main.innerHTML=\`
         <div class="ph"><div class="ph-t">💡 Tipps & Tricks</div></div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Klicke auf eine Kategorie um die Inhalte für jedes Produkt zu sehen.</div>
-        <div class="tips-grid">
-          <div class="tip-card" data-ppage="briefings"><div class="tip-card-icon">📋</div><div class="tip-card-label">Briefings</div><div class="tip-card-count">\${S.produkte.length} Produkte</div></div>
-          <div class="tip-card" data-ppage="skripte"><div class="tip-card-icon">📝</div><div class="tip-card-label">Skripte</div><div class="tip-card-count">\${S.produkte.length} Produkte</div></div>
-          <div class="tip-card" data-ppage="videos"><div class="tip-card-icon">🎬</div><div class="tip-card-label">Lernvideos</div><div class="tip-card-count">\${S.produkte.length} Produkte</div></div>
-          <div class="tip-card" style="opacity:.5;cursor:default"><div class="tip-card-icon">🤖</div><div class="tip-card-label">Skript-Generator</div><div class="tip-card-count" style="color:var(--org)">Bald verfügbar</div></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Alle Inhalte die dein Team für dich bereitgestellt hat.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+          \${allCats.map(cat=>{
+            const count=hub.items.filter(x=>x.cat===cat).length;
+            const icon=catIcons[cat]||'📁';
+            return \`<div class="tip-card" data-ppage="tip-cat-\${cat}" style="padding:20px">\`+
+              \`<div style="font-size:28px;margin-bottom:10px">\${icon}</div>\`+
+              \`<div style="font-size:15px;font-weight:600;margin-bottom:4px">\${cat}</div>\`+
+              \`<div style="font-size:11px;color:var(--muted)">\${count} Inhalt\${count!==1?'e':''}</div>\`+
+              \`</div>\`;
+          }).join('')}
         </div>\`;
-      main.querySelectorAll('[data-ppage]').forEach(card=>card.addEventListener('click',()=>{G('creator-portal').querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));G('pni-'+card.dataset.ppage)?.classList.add('on');renderPortalPage(card.dataset.ppage);}));
-    } else {
-      const key=page==='briefings'?'briefings':page==='skripte'?'skripte':'lernvideos';
-      main.innerHTML=\`
-        <div class="ph"><div><button class="bk" id="pback">← Zurück</button><div class="ph-t">\${tipMap[page]}</div></div></div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Wähle ein Produkt um die \${tipMap[page]} zu sehen.</div>
-        <div class="prod-tip-grid">\${S.produkte.map(p=>\`<div class="prod-tip-card" data-pid="\${p.id}">
-          <div class="prod-tip-img">\${p.url?\`<img src="\${p.url}" style="width:100%;height:100%;object-fit:cover">\`:\`<span>\${p.icon||'📦'}</span>\`}</div>
-          <div class="prod-tip-name">\${p.name}<div style="font-size:10px;color:var(--muted);font-weight:400">\${p[key]?.length||0} Einträge</div></div>
-        </div>\`).join('')}</div>
-        <div id="tip-detail"></div>\`;
-      G('pback').addEventListener('click',()=>renderPortalPage('tips'));
-      main.querySelectorAll('[data-pid]').forEach(card=>card.addEventListener('click',()=>{
-        const p=S.produkte.find(x=>x.id===+card.dataset.pid);if(!p)return;
-        const items=p[key]||[];
-        G('tip-detail').innerHTML=\`
-          <div style="margin-top:16px;background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px">
-            <div style="font-size:13px;font-weight:600;margin-bottom:12px">\${p.icon||'📦'} \${p.name} – \${tipMap[page]}</div>
-            \${items.length?items.map((item,i)=>\`<div style="background:var(--lt);border-radius:7px;padding:10px 13px;margin-bottom:7px;font-size:12px;line-height:1.6"><span style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;display:block">\${i+1}.</span>\${item}</div>\`).join(''):'<div style="color:var(--muted);font-size:12px">Noch keine Inhalte vorhanden.</div>'}
-            \${page!=='videos'?\`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bdr)"><div style="font-size:11px;font-weight:600;margin-bottom:7px;color:var(--muted)">+ Neuer Eintrag (Admin)</div><div style="display:flex;gap:7px"><input class="fi" id="tip-new-inp" placeholder="Neuen Eintrag hinzufügen..." style="flex:1;font-size:11px"><button class="btn btn-p btn-sm" id="tip-new-add">+</button></div></div>\`:''}
-          </div>\`;
-        G('tip-new-add')?.addEventListener('click',()=>{const v=G('tip-new-inp').value.trim();if(!v)return;if(!p[key])p[key]=[];p[key].push(v);G('tip-new-inp').value='';main.querySelector('[data-pid="'+p.id+'"]').click();showT('Hinzugefügt ✓');});
-      }));
+      main.querySelectorAll('[data-ppage]').forEach(card=>{
+        card.addEventListener('click',()=>renderPortalPage(card.dataset.ppage));
+      });
+    }
     }
   }
-}
 
 // ── SETTINGS / TAGS ────────────────────────────────────────────────────────
 function rTags(){G('tags-list').innerHTML=S.tags.map(t=>\`<span class="tag" style="display:inline-flex;align-items:center;gap:3px">\${t}<span data-dt="\${t}" style="cursor:pointer;font-size:9px;color:var(--blue);opacity:.7">✕</span></span>\`).join('');G('tags-list').querySelectorAll('[data-dt]').forEach(x=>x.addEventListener('click',()=>{S.tags=S.tags.filter(t=>t!==x.dataset.dt);rTags();}));}
@@ -1678,9 +1751,33 @@ function confirmM(){
     const name=G('m-un').value.trim();if(!name){showT('Bezeichnung erforderlich');return;}
     const link=G('m-ul').value.trim();const file=G('m-uf').files[0];if(!file&&!link){showT('Datei oder Link erforderlich');return;}
     const fld=S.aF?.fld;if(!fld){showT('Kein Ordner');return;}
-    const nf={id:uid(),name,type:file?(file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':'file'):'file',url:link||null,size:file?(file.size/1024/1024).toFixed(1)+' MB':'Link',uploadedAt:null,comments:[]};
-    if(file){G('m-prog').style.display='block';G('modal-ok').disabled=true;const r=new FileReader();r.onload=e=>{nf.url=e.target.result;};r.readAsDataURL(file);let p=0;const iv=setInterval(()=>{p+=8;G('m-pb').style.width=Math.min(p,100)+'%';G('m-ps').textContent=\`R2: \${Math.min(p,100)}%\`;if(p>=100){clearInterval(iv);G('m-pb').style.background='var(--grn)';G('m-ps').textContent='✓ R2';setTimeout(()=>{fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT(\`"\${name}" hochgeladen ✓\`);},400);}},50);return;}
-    fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT(\`"\${name}" hinzugefügt ✓\`);return;
+    const cid=S.aC?.id;if(!cid){showT('Kein Creator');return;}
+    const tab=S.aCT||'bilder';
+    const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+    G('modal-ok').disabled=true;
+    if(link){
+      fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:(()=>{const fd=new FormData();fd.append('linkUrl',link);fd.append('linkName',name);fd.append('creatorId',String(cid));fd.append('tab',tab);return fd;})()})
+        .then(r=>r.json()).then(d=>{
+          const nf={id:d.upload?.id||uid(),name,type:'link',url:link,size:'Link',uploadedAt:null,comments:[],r2Key:null};
+          fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT('"'+name+'" hinzugefügt ✓');
+        }).catch(()=>{showT('Fehler');G('modal-ok').disabled=false;});
+      return;
+    }
+    G('m-prog').style.display='block';G('m-ps').textContent='Wird hochgeladen...';
+    const fd=new FormData();fd.append('file',file);fd.append('creatorId',String(cid));fd.append('tab',tab);
+    const xhr=new XMLHttpRequest();xhr.open('POST','/api/upload');xhr.setRequestHeader('Authorization','Bearer '+token);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);G('m-pb').style.width=p+'%';G('m-ps').textContent='R2: '+p+'%';}};
+    xhr.onload=()=>{
+      const d=JSON.parse(xhr.responseText);
+      if(xhr.status!==200){showT('Fehler: '+(d.error||'Upload fehlgeschlagen'));G('modal-ok').disabled=false;return;}
+      G('m-pb').style.background='var(--grn)';G('m-ps').textContent='✓ Gespeichert';
+      const ft=file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type==='application/pdf'?'pdf':'file';
+      const nf={id:d.upload?.id||uid(),name,type:ft,url:d.upload?.file_url||d.url,size:(file.size/1024/1024).toFixed(1)+' MB',uploadedAt:null,comments:[],r2Key:d.upload?.r2_key||null};
+      setTimeout(()=>{fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT('"'+name+'" hochgeladen ✓');},400);
+    };
+    xhr.onerror=()=>{showT('Netzwerkfehler');G('modal-ok').disabled=false;};
+    xhr.send(fd);
+    return;
   }
   if(type==='addP'||type==='editP'){
     const isE=type==='editP';const name=G('m-pn').value.trim();if(!name){showT('Name erforderlich');return;}
@@ -1862,6 +1959,146 @@ function portalNewFolder(){
   },50);
 }
 
+
+// ── CONTENT HUB ──────────────────────────────────────────────────────────
+function rContentHub(){
+  const hub=S.contentHub;
+  const allCats=['Alle',...hub.cats];
+  // Category tabs
+  G('ch-cats').innerHTML=allCats.map(c=>
+    '<button class="fp-chip'+(S.chFilter===c?' sel':'')+'" data-chcat="'+c+'">'+c+'</button>'
+  ).join('');
+  G('ch-cats').querySelectorAll('[data-chcat]').forEach(btn=>{
+    btn.addEventListener('click',()=>{S.chFilter=btn.dataset.chcat;rContentHub();});
+  });
+  // Filter items
+  const search=G('ch-search').value.toLowerCase();
+  let items=hub.items;
+  if(S.chFilter!=='Alle')items=items.filter(x=>x.cat===S.chFilter);
+  if(search)items=items.filter(x=>x.title.toLowerCase().includes(search)||x.desc.toLowerCase().includes(search));
+  // Render grid
+  if(!items.length){
+    G('ch-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:13px">'+
+      (hub.items.length?'Keine Ergebnisse':'Noch keine Inhalte. Klicke auf "+ Inhalt hinzufügen" um zu starten.')+'</div>';
+  } else {
+    G('ch-grid').innerHTML=items.map(item=>{
+      const isNew=item.createdAt&&(Date.now()-new Date(item.createdAt).getTime())<7*24*60*60*1000;
+      const typeIcon=item.type==='video'?'🎬':item.type==='pdf'?'📄':item.type==='link'?'🔗':'📎';
+      const catColor={'Briefings':'#dbeafe;color:#1e40af','Skripte':'#dcfce7;color:#166534','Lernvideos':'#fef3c7;color:#92400e'}[item.cat]||'#f3f4f6;color:#374151';
+      return '<div class="sc ch-card" style="padding:18px;cursor:pointer" data-chid="'+item.id+'">'+ 
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">'+
+        '<div style="font-size:22px">'+typeIcon+'</div>'+
+        '<div style="display:flex;gap:6px;align-items:center">'+
+        (isNew?'<span style="background:#dcfce7;color:#166534;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.5px">NEU</span>':'')+
+        '<span style="font-size:10px;padding:2px 8px;border-radius:5px;background:'+catColor+'">'+item.cat+'</span>'+
+        '<button class="dot-btn" data-ch-dot="'+item.id+'">···</button>'+
+        '</div></div>'+
+        '<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.3">'+item.title+'</div>'+
+        '<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">'+( item.desc||'')+'</div>'+
+        (item.prod?'<div style="font-size:10px;color:var(--muted);margin-bottom:8px">📦 '+( S.produkte.find(p=>p.id===item.prod)?.name||'')+'</div>':'')+
+        '<div style="display:flex;gap:6px;margin-top:auto">'+
+        (item.url?'<a href="'+item.url+'" target="_blank" style="font-size:11px;background:var(--lt);border:1px solid var(--bdr);border-radius:6px;padding:4px 10px;text-decoration:none;color:var(--text)">Öffnen ↗</a>':'')+
+        (item.file?'<button class="btn" style="font-size:11px;padding:4px 10px" data-chdown="'+item.id+'">⬇ Download</button>':'')+
+        '</div>'+
+        '</div>';
+    }).join('');
+    G('ch-grid').querySelectorAll('[data-chid]').forEach(card=>{
+      card.addEventListener('click',e=>{
+        if(e.target.closest('.dot-btn')||e.target.closest('a')||e.target.closest('button'))return;
+      });
+    });
+    G('ch-grid').querySelectorAll('[data-ch-dot]').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const id=btn.dataset.chDot;
+        showDot(btn,()=>openChEdit(id),null,()=>{
+          S.contentHub.items=S.contentHub.items.filter(x=>x.id!==id);
+          rContentHub();showT('Inhalt gelöscht');
+        });
+      });
+    });
+    G('ch-grid').querySelectorAll('[data-chdown]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const item=S.contentHub.items.find(x=>x.id===btn.dataset.chdown);
+        if(item&&item.file){const a=document.createElement('a');a.href=item.file;a.download=item.title;a.click();}
+      });
+    });
+  }
+  // Search live
+  G('ch-search').oninput=()=>rContentHub();
+}
+
+function openChEdit(id){
+  const item=S.contentHub.items.find(x=>x.id===id);
+  openChModal(item);
+}
+
+function openChModal(item){
+  const isE=!!item;
+  const body=G('modal-body'),title=G('modal-title'),ok=G('modal-ok');
+  title.textContent=isE?'Inhalt bearbeiten':'Inhalt hinzufügen';
+  ok.textContent='Speichern';
+  G('modal-cancel').style.display='';
+  const catOpts=S.contentHub.cats.map(c=>'<option value="'+c+'"'+(item?.cat===c?' selected':'')+'>'+c+'</option>').join('');
+  const prodOpts='<option value="">– Kein Produkt –</option>'+S.produkte.map(p=>'<option value="'+p.id+'"'+(item?.prod===p.id?' selected':'')+'>'+p.name+'</option>').join('');
+  body.innerHTML=\`
+    <div class="fg"><label class="fl">Titel *</label><input class="fi" id="ch-m-title" value="\${item?.title||''}" placeholder="z.B. Briefing Serum XY"></div>
+    <div class="fg"><label class="fl">Beschreibung</label><textarea class="fi" id="ch-m-desc" rows="2" style="resize:none">\${item?.desc||''}</textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fg"><label class="fl">Kategorie</label><select class="fi" id="ch-m-cat">\${catOpts}</select></div>
+      <div class="fg"><label class="fl">Typ</label><select class="fi" id="ch-m-type">
+        <option value="link" \${item?.type==='link'?'selected':''}>🔗 Link</option>
+        <option value="pdf" \${item?.type==='pdf'?'selected':''}>📄 PDF Upload</option>
+        <option value="video" \${item?.type==='video'?'selected':''}>🎬 Video</option>
+        <option value="file" \${item?.type==='file'?'selected':''}>📎 Datei</option>
+      </select></div>
+    </div>
+    <div class="fg"><label class="fl">Produkt zuordnen (optional)</label><select class="fi" id="ch-m-prod">\${prodOpts}</select></div>
+    <div class="fg" id="ch-m-url-wrap"><label class="fl">Link URL</label><input class="fi" id="ch-m-url" value="\${item?.url||''}" placeholder="https://..."></div>
+    <div class="fg" id="ch-m-file-wrap" style="display:none"><label class="fl">Datei hochladen</label><input type="file" class="fi" id="ch-m-file" style="padding:5px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px" id="ch-m-file-cur">\${item?.file?'Aktuelle Datei vorhanden':''}  </div>\`;
+  // Toggle URL/File based on type
+  G('ch-m-type').onchange=function(){
+    const isFile=this.value==='pdf'||this.value==='file';
+    G('ch-m-url-wrap').style.display=isFile?'none':'';
+    G('ch-m-file-wrap').style.display=isFile?'':'none';
+  };
+  G('ch-m-type').dispatchEvent(new Event('change'));
+  ok.onclick=async()=>{
+    const t=G('ch-m-title').value.trim();if(!t){showT('Titel erforderlich');return;}
+    const newItem={
+      id:item?.id||uid(),
+      title:t,
+      desc:G('ch-m-desc').value.trim(),
+      cat:G('ch-m-cat').value,
+      type:G('ch-m-type').value,
+      prod:G('ch-m-prod').value||null,
+      url:G('ch-m-url').value.trim()||item?.url||null,
+      file:item?.file||null,
+      createdAt:item?.createdAt||new Date().toISOString()
+    };
+    // Handle file upload
+    const fileInput=G('ch-m-file');
+    if(fileInput.files&&fileInput.files[0]){
+      const file=fileInput.files[0];
+      try{
+        const token=localStorage.getItem('token')||'';
+        const urlRes=await fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({filename:file.name,contentType:file.type})});
+        if(urlRes.ok){
+          const {uploadUrl,publicUrl}=await urlRes.json();
+          await fetch(uploadUrl,{method:'PUT',body:file,headers:{'Content-Type':file.type}});
+          newItem.file=publicUrl;
+          newItem.url=null;
+        }
+      }catch(e){showT('Upload fehlgeschlagen');}
+    }
+    if(isE){const idx=S.contentHub.items.findIndex(x=>x.id===item.id);S.contentHub.items[idx]=newItem;}
+    else S.contentHub.items.push(newItem);
+    closeM();rContentHub();showT(isE?'Inhalt aktualisiert ✓':'Inhalt hinzugefügt ✓');
+  };
+  G('modal-bg').classList.add('open');
+}
+
 go('dashboard');rFP();
 // Mobile sidebar toggle
 G('menu-toggle')?.addEventListener('click',()=>{
@@ -1879,6 +2116,11 @@ document.querySelectorAll('.ni').forEach(n=>n.addEventListener('click',()=>{
     G('sb-overlay').classList.remove('open');
   }
 }));
+G('ch-add-btn')?.addEventListener('click',()=>openChModal(null));
+G('ch-add-cat-btn')?.addEventListener('click',()=>{
+  const name=prompt('Neue Kategorie:');if(!name||!name.trim())return;
+  S.contentHub.cats.push(name.trim());rContentHub();showT('Kategorie hinzugefügt ✓');
+});
 G('logout-btn')?.addEventListener('click',()=>{
   if(confirm('Wirklich abmelden?')){localStorage.removeItem('token');localStorage.removeItem('user');window.location.href='/login';}
 });
