@@ -786,6 +786,35 @@ function rDash(){
   }
   G('d-creators').innerHTML=cRowsHTML(list.slice(0,5));
   attachCR(G('d-creators'));
+  // Banner: neue Creator-Uploads
+  if(!S._uploadBannerDismissed){
+    const token=localStorage.getItem('token')||'';
+    fetch('/api/uploads?creatorId=all',{headers:{'Authorization':'Bearer '+token}})
+      .then(r=>r.json()).then(uploads=>{
+        if(!Array.isArray(uploads))return;
+        const unseen=uploads.filter(u=>!u.seen_by_admin);
+        if(!unseen.length)return;
+        // Group by creator_id
+        const byCreator={};
+        unseen.forEach(u=>{if(!byCreator[u.creator_id])byCreator[u.creator_id]=[];byCreator[u.creator_id].push(u);});
+        const creatorIds=Object.keys(byCreator);
+        const names=creatorIds.map(cid=>{const c=S.creators.find(x=>String(x.id)===String(cid));return c?c.name:cid;});
+        const bannerEl=document.getElementById('upload-banner');
+        if(bannerEl)bannerEl.remove();
+        const banner=document.createElement('div');
+        banner.id='upload-banner';
+        banner.style.cssText='background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#1e40af;display:flex;align-items:flex-start;justify-content:space-between;gap:10px';
+        const msg=names.length===1?\`<strong>\${names[0]}</strong> hat neuen Content hochgeladen — bitte geh auf das Profil.\`:\`<strong>\${names.join(', ')}</strong> haben neuen Content hochgeladen.\`;
+        banner.innerHTML=\`<div>📤 \${msg}<br><span style="font-size:10px;opacity:.7">\${unseen.length} neue Datei\${unseen.length>1?'en':''}</span></div><button id="upload-banner-x" style="background:none;border:none;cursor:pointer;font-size:16px;color:#1e40af;padding:0;flex-shrink:0">✕</button>\`;
+        const af=G('af-row');if(af)af.insertAdjacentElement('afterend',banner);
+        document.getElementById('upload-banner-x')?.addEventListener('click',()=>{S._uploadBannerDismissed=true;banner.remove();});
+        // Click on banner goes to first creator profile
+        banner.querySelector('div')?.addEventListener('click',()=>{
+          const firstId=creatorIds[0];const c=S.creators.find(x=>String(x.id)===String(firstId));
+          if(c){go('creators');setTimeout(()=>openC(c.id),100);}
+        });
+      }).catch(()=>{});
+  }
 }
 
 // ── CREATOR ROWS ──────────────────────────────────────────────────────────
@@ -856,6 +885,36 @@ function openC(id){
   rCHdr();
   G('c-tabs').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   rCT('bilder');
+  const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+  fetch('/api/uploads?creatorId='+String(id),{headers:{'Authorization':'Bearer '+token}})
+    .then(r=>r.json()).then(uploads=>{
+      if(!Array.isArray(uploads))return;
+      const tabMap={'bilder':'bilder','videos':'videos','roh':'roh','auswertung':'auswertung'};
+      const newTabs=new Set();
+      uploads.forEach(u=>{
+        const tab=tabMap[u.tab]||'bilder';
+        if(!c.flds[tab])c.flds[tab]=[];
+        let fld=c.flds[tab].find(f=>f.id==='__db_uploads__');
+        if(!fld){fld={id:'__db_uploads__',name:'Uploads',batch:'Creator Upload',date:new Date().toISOString().slice(0,10),deadline:null,prods:[],tags:[],files:[]};c.flds[tab].unshift(fld);}
+        if(!fld.files.find(f=>f.id===u.id)){
+          fld.files.push({id:u.id,name:u.file_name,type:u.file_type,url:u.file_url,size:u.file_size?(u.file_size/1024/1024).toFixed(1)+' MB':'',uploadedAt:null,comments:[],r2Key:u.r2_key});
+          if(!u.seen_by_admin)newTabs.add(tab);
+        }
+      });
+      if(newTabs.size>0){
+        G('c-tabs').querySelectorAll('.tab').forEach(tabEl=>{
+          const tLabel=tabEl.textContent?.trim()||'';
+          const tKey={'🖼️ Bilder':'bilder','🎬 Videos':'videos','📹 Rohmaterial':'roh','📊 Auswertungen':'auswertung'}[tLabel]||tabEl.dataset?.t||tLabel.toLowerCase();
+          if(newTabs.has(tKey)&&!tabEl.querySelector('.new-dot')){
+            const dot=document.createElement('span');dot.className='new-dot';
+            dot.style.cssText='display:inline-block;width:7px;height:7px;background:#ef4444;border-radius:50%;margin-left:4px;vertical-align:middle;flex-shrink:0;';
+            tabEl.appendChild(dot);
+          }
+        });
+        fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:String(id)})}).catch(()=>{});
+      }
+      rCHdr();rCT(S.aCT);
+    }).catch(()=>{});
 }
 
 function rCHdr(){
@@ -1121,7 +1180,14 @@ G('lb-comment-send').addEventListener('click',()=>{
 });
 G('lb-comment-inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G('lb-comment-send').click();}});
 
-function delFile(fid,fldId){askConfirm('Datei löschen?',()=>{for(const tab of Object.keys(S.aC.flds)){const f=S.aC.flds[tab].find(x=>x.id===fldId);if(f){f.files=f.files.filter(x=>x.id!==fid);rFiles(f);rCHdr();showT('Datei gelöscht ✓');return;}}});}
+function delFile(fid,fldId){
+  const fileObj=(()=>{for(const t of Object.keys(S.aC?.flds||{})){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){return f.files.find(x=>x.id===fid)||null;}}return null;})();
+  askConfirm('Datei löschen?',async()=>{
+    const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+    try{await fetch('/api/upload',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({uploadId:String(fid),r2Key:fileObj?.r2Key||null})});}catch(e){}
+    for(const t of Object.keys(S.aC.flds)){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){f.files=f.files.filter(x=>x.id!==fid);rFiles(f);rCHdr();showT('Datei gelöscht ✓');return;}}
+  });
+}
 function delFld(fid,tab,name){askConfirm(\`Ordner "\${name}" löschen?\`,()=>{S.aC.flds[tab]=S.aC.flds[tab].filter(f=>f.id!==fid);rCT(tab);rCHdr();showT('Ordner gelöscht ✓');});}
 function delC(id,name){askConfirm(\`Creator "\${name}" löschen?\`,()=>{S.creators=S.creators.filter(c=>c.id!==id);if(S.aC?.id===id)showCL();rCreators();uBdg();rDash();showT(\`"\${name}" gelöscht ✓\`);});}
 function backC(){S.aC=null;showCL();G('tb-t').textContent='Creator';rCreators();}
@@ -1295,14 +1361,14 @@ function rCInvite(){
     const rows=invited.map((c,i)=>{
       const invDate=c.invitedAt?new Date(c.invitedAt).toLocaleDateString('de-DE'):'-';
       const lastLogin=c.lastLogin?new Date(c.lastLogin).toLocaleDateString('de-DE'):'-';
-      const accepted=!!c.lastLogin;
+      const accepted=c.status==='aktiv'||!!c.lastLogin;
       const bb=i<invited.length-1?'border-bottom:1px solid var(--bdr);':'';
       const st=accepted?'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0':'background:#fffbeb;color:#d97706;border:1px solid #fde68a';
       return '<div style="display:grid;grid-template-columns:2fr 1fr 1.2fr 1fr auto;align-items:center;padding:8px 10px;'+bb+'gap:6px">'
         +'<div style="display:flex;align-items:center;gap:7px"><div style="width:24px;height:24px;border-radius:50%;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff">'+c.ini+'</div>'
         +'<div><div style="font-size:12px;font-weight:500">'+c.name+'</div><div style="font-size:10px;color:var(--muted)">'+( c.email||'-')+'</div></div></div>'
         +'<div style="font-size:11px">'+invDate+'</div>'
-        +'<span style="font-size:10px;border-radius:5px;padding:1px 7px;'+st+'">'+( accepted?'✓ Angenommen':'⏳ Ausstehend')+'</span>'
+        +'<span style="font-size:10px;border-radius:5px;padding:1px 7px;'+st+'">'+( accepted?'✓ Aktiv':'⏳ Ausstehend')+'</span>'
         +'<div style="font-size:11px;color:'+(accepted?'var(--text)':'var(--muted)')+'">'+lastLogin+'</div>'
         +'<div style="display:flex;gap:4px">'
         +'<button data-resend="'+c.id+'" title="Neuen Link senden" style="background:var(--lt);border:1px solid var(--bdr);border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer">🔄</button>'
@@ -1685,9 +1751,33 @@ function confirmM(){
     const name=G('m-un').value.trim();if(!name){showT('Bezeichnung erforderlich');return;}
     const link=G('m-ul').value.trim();const file=G('m-uf').files[0];if(!file&&!link){showT('Datei oder Link erforderlich');return;}
     const fld=S.aF?.fld;if(!fld){showT('Kein Ordner');return;}
-    const nf={id:uid(),name,type:file?(file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':'file'):'file',url:link||null,size:file?(file.size/1024/1024).toFixed(1)+' MB':'Link',uploadedAt:null,comments:[]};
-    if(file){G('m-prog').style.display='block';G('modal-ok').disabled=true;const r=new FileReader();r.onload=e=>{nf.url=e.target.result;};r.readAsDataURL(file);let p=0;const iv=setInterval(()=>{p+=8;G('m-pb').style.width=Math.min(p,100)+'%';G('m-ps').textContent=\`R2: \${Math.min(p,100)}%\`;if(p>=100){clearInterval(iv);G('m-pb').style.background='var(--grn)';G('m-ps').textContent='✓ R2';setTimeout(()=>{fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT(\`"\${name}" hochgeladen ✓\`);},400);}},50);return;}
-    fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT(\`"\${name}" hinzugefügt ✓\`);return;
+    const cid=S.aC?.id;if(!cid){showT('Kein Creator');return;}
+    const tab=S.aCT||'bilder';
+    const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+    G('modal-ok').disabled=true;
+    if(link){
+      fetch('/api/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:(()=>{const fd=new FormData();fd.append('linkUrl',link);fd.append('linkName',name);fd.append('creatorId',String(cid));fd.append('tab',tab);return fd;})()})
+        .then(r=>r.json()).then(d=>{
+          const nf={id:d.upload?.id||uid(),name,type:'link',url:link,size:'Link',uploadedAt:null,comments:[],r2Key:null};
+          fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT('"'+name+'" hinzugefügt ✓');
+        }).catch(()=>{showT('Fehler');G('modal-ok').disabled=false;});
+      return;
+    }
+    G('m-prog').style.display='block';G('m-ps').textContent='Wird hochgeladen...';
+    const fd=new FormData();fd.append('file',file);fd.append('creatorId',String(cid));fd.append('tab',tab);
+    const xhr=new XMLHttpRequest();xhr.open('POST','/api/upload');xhr.setRequestHeader('Authorization','Bearer '+token);
+    xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);G('m-pb').style.width=p+'%';G('m-ps').textContent='R2: '+p+'%';}};
+    xhr.onload=()=>{
+      const d=JSON.parse(xhr.responseText);
+      if(xhr.status!==200){showT('Fehler: '+(d.error||'Upload fehlgeschlagen'));G('modal-ok').disabled=false;return;}
+      G('m-pb').style.background='var(--grn)';G('m-ps').textContent='✓ Gespeichert';
+      const ft=file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':file.type==='application/pdf'?'pdf':'file';
+      const nf={id:d.upload?.id||uid(),name,type:ft,url:d.upload?.file_url||d.url,size:(file.size/1024/1024).toFixed(1)+' MB',uploadedAt:null,comments:[],r2Key:d.upload?.r2_key||null};
+      setTimeout(()=>{fld.files.push(nf);rFiles(fld);rCHdr();closeM();showT('"'+name+'" hochgeladen ✓');},400);
+    };
+    xhr.onerror=()=>{showT('Netzwerkfehler');G('modal-ok').disabled=false;};
+    xhr.send(fd);
+    return;
   }
   if(type==='addP'||type==='editP'){
     const isE=type==='editP';const name=G('m-pn').value.trim();if(!name){showT('Name erforderlich');return;}
@@ -2038,49 +2128,6 @@ G('portal-logout-btn')?.addEventListener('click',()=>{
   if(confirm('Vom Creator Portal abmelden?')){localStorage.removeItem('creator_token');localStorage.removeItem('creator');G('creator-portal').classList.remove('open');window.location.href='/creator';}
 });
 `
-
-function LoadingScreen() {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: '#f4f5f7',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexDirection: 'column', gap: 12, fontFamily: 'system-ui, sans-serif',
-      zIndex: 99999
-    }}>
-      <div style={{ fontSize: 28 }}>⏳</div>
-      <div style={{ fontSize: 14, color: '#888' }}>Creator Portal wird geladen...</div>
-    </div>
-  )
-}
-
-function ErrorScreen({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div style={{
-      minHeight: '100vh', background: '#f0f0f5', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: 24,
-      fontFamily: 'system-ui, sans-serif'
-    }}>
-      <div style={{
-        background: '#fff', border: '1px solid #e8e8ec', borderRadius: 20,
-        padding: '44px 40px', width: '100%', maxWidth: 400, textAlign: 'center'
-      }}>
-        <div style={{ fontSize: 40, marginBottom: 16 }}>🔗</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111', margin: '0 0 10px' }}>
-          Link ungültig oder abgelaufen
-        </h2>
-        <p style={{ fontSize: 14, color: '#888', lineHeight: 1.6, margin: '0 0 28px' }}>
-          Bitte fordere einen neuen Link bei deinem Filapen-Team an.
-        </p>
-        <button onClick={onRetry} style={{
-          width: '100%', background: '#111', color: '#fff', fontWeight: 600,
-          fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer'
-        }}>
-          Neuen Link anfordern
-        </button>
-      </div>
-    </div>
-  )
-}
 
 type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
 
