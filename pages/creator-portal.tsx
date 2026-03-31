@@ -2147,6 +2147,16 @@ export default function CreatorPortalPage() {
     }
   }, [])
 
+  // Cleanup styleEl only on component unmount — not on every state change
+  useEffect(() => {
+    return () => {
+      if (styleRef.current) {
+        try { document.head.removeChild(styleRef.current) } catch {}
+        styleRef.current = null
+      }
+    }
+  }, [])
+
   async function verifyCode(code: string) {
     try {
       const res = await fetch('/api/auth/creator-login', {
@@ -2264,52 +2274,66 @@ export default function CreatorPortalPage() {
 
     // Verify portal got .open class
     const portalEl = document.getElementById('creator-portal')
-    const hasOpen = portalEl?.classList.contains('open') ?? false
-    console.log('[CreatorPortal] portal element exists:', !!portalEl, 'has .open:', hasOpen)
-
-    if (!hasOpen) {
-      // openPortal failed — try manually
-      console.warn('[CreatorPortal] Manually adding .open class')
-      if (portalEl) {
-        portalEl.classList.add('open')
-        // Also render the home page manually
-        if (appContext.renderPortalPage) {
-          try { appContext.renderPortalPage('home') } catch(e) {}
-        }
+    if (!portalEl) {
+      console.error('[CreatorPortal] portal element missing')
+      setAuthState('portal_error')
+      return
+    }
+    if (!portalEl.classList.contains('open')) {
+      portalEl.classList.add('open')
+      if (appContext.renderPortalPage) {
+        try { appContext.renderPortalPage('home') } catch(e) {}
       }
     }
+    console.log('[CreatorPortal] portal has .open:', portalEl.classList.contains('open'))
 
-    // Hide admin sidebar and main — portal covers them via z-index:500
-    // but explicitly hide to be safe
-    const adminSb = document.getElementById('admin-sb')
-    if (adminSb) adminSb.style.display = 'none'
-    const adminMain = document.querySelector('.main') as HTMLElement | null
-    if (adminMain) adminMain.style.display = 'none'
-
-    // Override logout → /creator
-    const logoutBtn = document.getElementById('portal-logout-btn')
-    if (logoutBtn) {
-      logoutBtn.onclick = (e: Event) => {
-        e.stopPropagation()
-        if (confirm('Wirklich abmelden?')) {
-          clearSession()
-          window.location.href = '/creator'
-        }
-      }
-    }
-
-    // Hide 'Portal schließen'
-    const closeBtn = document.getElementById('close-portal')
-    if (closeBtn) closeBtn.style.display = 'none'
-
+    // SET PORTAL_READY IMMEDIATELY — before any cosmetic DOM operations
+    // This makes the container visible right away
     setAuthState('portal_ready')
 
-    return () => {
-      if (styleRef.current) {
-        try { document.head.removeChild(styleRef.current) } catch {}
-        styleRef.current = null
+    // Remove loader and unhide container after portal is ready
+    setTimeout(() => {
+      // Fix 1: Remove loading overlay
+      const loader = document.querySelector('[style*="z-index:99999"], [style*="z-index: 99999"]')
+      if (loader) loader.remove()
+
+      // Fix 2: Make portal explicitly visible
+      const portal = document.getElementById('creator-portal')
+      if (portal) {
+        portal.style.opacity = '1'
+        portal.style.visibility = 'visible'
+        portal.style.pointerEvents = 'auto'
       }
-    }
+
+      // Fix 3: Unhide any visibility:hidden containers
+      document.querySelectorAll('[style*="visibility:hidden"]').forEach((el: any) => {
+        el.style.visibility = 'visible'
+      })
+      document.querySelectorAll('[style*="pointer-events:none"]').forEach((el: any) => {
+        el.style.pointerEvents = 'auto'
+      })
+
+      // Cosmetic: hide admin UI elements
+      const adminSb = document.getElementById('admin-sb')
+      if (adminSb) adminSb.style.display = 'none'
+      const adminMain = document.querySelector('.main') as HTMLElement | null
+      if (adminMain) adminMain.style.display = 'none'
+      const logoutBtn = document.getElementById('portal-logout-btn')
+      if (logoutBtn) {
+        logoutBtn.onclick = (e: Event) => {
+          e.stopPropagation()
+          if (confirm('Wirklich abmelden?')) {
+            clearSession()
+            window.location.href = '/creator'
+          }
+        }
+      }
+      const closeBtn = document.getElementById('close-portal')
+      if (closeBtn) closeBtn.style.display = 'none'
+    }, 0)
+
+    // Note: no cleanup here — styleEl must persist for portal rendering
+    // It will be cleaned up on component unmount via separate effect below
   }, [authState, creatorData])
 
   return (
