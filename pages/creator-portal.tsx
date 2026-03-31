@@ -885,11 +885,12 @@ function openC(id){
   rCHdr();
   G('c-tabs').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   rCT('bilder');
-  const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+  const token=localStorage.getItem('token')||'';
+  if(!token)return;
   fetch('/api/uploads?creatorId='+String(id),{headers:{'Authorization':'Bearer '+token}})
     .then(r=>r.json()).then(uploads=>{
       if(!Array.isArray(uploads))return;
-      const tabMap={'bilder':'bilder','videos':'videos','roh':'roh','auswertung':'auswertung'};
+      const tabMap={'bilder':'bilder','videos':'videos','roh':'roh','auswertung':'auswertung','pdf':'bilder','link':'bilder','file':'bilder'};
       const newTabs=new Set();
       uploads.forEach(u=>{
         const tab=tabMap[u.tab]||'bilder';
@@ -911,7 +912,7 @@ function openC(id){
             tabEl.appendChild(dot);
           }
         });
-        fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:String(id)})}).catch(()=>{});
+        const adminTok=localStorage.getItem('token')||'';if(adminTok){fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminTok},body:JSON.stringify({creatorId:String(id)})}).catch(()=>{});}
       }
       rCHdr();rCT(S.aCT);
     }).catch(()=>{});
@@ -2098,6 +2099,14 @@ function openChModal(item){
   };
   G('modal-bg').classList.add('open');
 }
+
+// Expose key functions and state on window for React sync
+window.S = S;
+window.rDash = rDash;
+window.rCreators = rCreators;
+window.rCInvite = rCInvite;
+window.openC = openC;
+window.go = go;
 
 go('dashboard');rFP();
 // Mobile sidebar toggle
