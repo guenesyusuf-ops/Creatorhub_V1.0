@@ -2082,7 +2082,7 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error'
+type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
 
 export default function CreatorPortalPage() {
   const router = useRouter()
@@ -2154,9 +2154,11 @@ export default function CreatorPortalPage() {
     if (jsInitialized.current) return
     if (!ref.current) return
     jsInitialized.current = true
+    console.log('[CreatorPortal] Init effect running, creatorData:', creatorData?.name)
 
     // Inject full HTML — same as admin dashboard
     ref.current.innerHTML = HTML
+    console.log('[CreatorPortal] HTML injected, ref children:', ref.current.children.length)
 
     // Inject CSS
     const styleEl = document.createElement('style')
@@ -2166,22 +2168,29 @@ export default function CreatorPortalPage() {
 
     // Run JS and return S + openPortal from the function scope
     // Using return {} so we can call openPortal without window.* hacks
-    // Split JS at the admin init block
-    // S (char 435) and openPortal (char 54624) are defined BEFORE init (char 108540)
-    // The init block calls go('dashboard') → accesses missing admin DOM → throws
-    // Wrapping init in try/catch ensures return {} always executes
-    const INIT_MARKER = "\ngo('dashboard');rFP();"
-    const initIdx = JS.lastIndexOf(INIT_MARKER)
-    const jsBefore = JS.slice(0, initIdx)
-    const jsInit   = JS.slice(initIdx)
+    // PROVEN FIX (tested in Node.js):
+    // 62 top-level G() calls throw before return {} is reached
+    // because G() returns null for missing admin DOM elements
+    // Solution: prepend a safe G() that returns a dummy proxy for null elements
+    // and remove the conflicting 'const G=' from JS
+    const DUMMY_G = [
+      'var __dummy=new Proxy({},{',
+      '  get:function(t,k){',
+      '    if(k==="addEventListener"||k==="removeEventListener")return function(){};',
+      '    if(k==="classList")return{add:function(){},remove:function(){},toggle:function(){},contains:function(){return false;}};',
+      '    if(k==="querySelectorAll"||k==="querySelector")return function(){return{forEach:function(){},length:0};};',
+      '    if(k==="focus"||k==="blur"||k==="click"||k==="pause"||k==="play"||k==="removeAttribute"||k==="setAttribute")return function(){};',
+      '    return "";',
+      '  },',
+      '  set:function(){return true;}',
+      '});',
+      'var G=function(id){var el=document.getElementById(id);return el!==null?el:__dummy;};',
+    ].join('\n')
 
-    // Safeguard: verify symbols exist before init block at build time
-    // (verified statically: S@435, openPortal@54624, initBlock@108540)
-    const wrappedJS = (
-      jsBefore +
-      '\ntry{' + jsInit + '\n} catch(e) { console.error("[CreatorPortal] Admin init failed:", e instanceof Error ? e.message : String(e)); }' +
-      '\n;return { S: S, openPortal: openPortal, renderPortalPage: renderPortalPage };'
-    )
+    // Remove 'const G=...' from JS to avoid re-declaration conflict
+    const patchedJS = JS.replace('const G=id=>document.getElementById(id);', '/* G defined above */')
+
+    const wrappedJS = DUMMY_G + patchedJS + '\n;return {S:S, openPortal:openPortal, renderPortalPage:renderPortalPage};'
 
     let appContext: any = null
     try {
@@ -2194,9 +2203,11 @@ export default function CreatorPortalPage() {
     }
 
     if (!appContext || !appContext.S || !appContext.openPortal) {
-      console.error('[CreatorPortal] Portal context not available')
+      console.error('[CreatorPortal] Portal context not available — S:', !!appContext?.S, 'openPortal:', !!appContext?.openPortal)
+      setAuthState('portal_error')
       return
     }
+    console.log('[CreatorPortal] appContext OK — calling openPortal')
 
     const { S, openPortal } = appContext
     const cid = creatorData.id
@@ -2256,6 +2267,17 @@ export default function CreatorPortalPage() {
 
       {authState === 'error' && (
         <ErrorScreen onRetry={() => { window.location.href = '/creator' }} />
+      )}
+
+      {authState === 'portal_error' && (
+        <div style={{ position: 'fixed', inset: 0, background: '#f0f0f5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'system-ui' }}>
+          <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 20, padding: '44px 40px', maxWidth: 400, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111', margin: '0 0 10px' }}>Portal konnte nicht geladen werden</h2>
+            <p style={{ fontSize: 14, color: '#888', lineHeight: 1.6, margin: '0 0 28px' }}>Bitte lade die Seite neu.</p>
+            <button onClick={() => window.location.reload()} style={{ width: '100%', background: '#111', color: '#fff', fontWeight: 600, fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer' }}>Seite neu laden</button>
+          </div>
+        </div>
       )}
 
       <div
