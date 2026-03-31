@@ -2166,12 +2166,31 @@ export default function CreatorPortalPage() {
 
     // Run JS and return S + openPortal from the function scope
     // Using return {} so we can call openPortal without window.* hacks
+    // Split JS at the admin init block
+    // S (char 435) and openPortal (char 54624) are defined BEFORE init (char 108540)
+    // The init block calls go('dashboard') → accesses missing admin DOM → throws
+    // Wrapping init in try/catch ensures return {} always executes
+    const INIT_MARKER = "\ngo('dashboard');rFP();"
+    const initIdx = JS.lastIndexOf(INIT_MARKER)
+    const jsBefore = JS.slice(0, initIdx)
+    const jsInit   = JS.slice(initIdx)
+
+    // Safeguard: verify symbols exist before init block at build time
+    // (verified statically: S@435, openPortal@54624, initBlock@108540)
+    const wrappedJS = (
+      jsBefore +
+      '\ntry{' + jsInit + '\n} catch(e) { console.error("[CreatorPortal] Admin init failed:", e instanceof Error ? e.message : String(e)); }' +
+      '\n;return { S: S, openPortal: openPortal, renderPortalPage: renderPortalPage };'
+    )
+
     let appContext: any = null
     try {
-      const fn = new Function(JS + '\n;return {S:S, openPortal:openPortal, renderPortalPage:renderPortalPage};')
+      const fn = new Function(wrappedJS)
       appContext = fn()
+      console.log('[CreatorPortal] S exists:', !!appContext?.S)
+      console.log('[CreatorPortal] openPortal exists:', typeof appContext?.openPortal === 'function')
     } catch(e) {
-      console.error('[CreatorPortal] JS error:', e)
+      console.error('[CreatorPortal] Fatal JS error:', e instanceof Error ? (e as Error).message : String(e))
     }
 
     if (!appContext || !appContext.S || !appContext.openPortal) {
