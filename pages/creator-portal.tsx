@@ -1945,18 +1945,27 @@ var __nullProxy = new Proxy({}, {
 window.__isCreatorRoute = true;
 `
 
-    // Run APP_JS in its own scope — no preamble, no scope conflicts
-    // APP_JS defines window.S, window.openPortal, window.G via its own const declarations
-    // We then overwrite window.G with a safe version AFTER APP_JS completes
+    // Execute APP_JS and explicitly expose required symbols on window
+    // Top-level const/function in new Function() scope are NOT on window automatically
+    // So we append explicit window assignments to the patched JS string
+    const EXPOSE_GLOBALS = `
+;window.S = typeof S !== 'undefined' ? S : null;
+window.openPortal = typeof openPortal !== 'undefined' ? openPortal : null;
+window.openPortalLB = typeof openPortalLB !== 'undefined' ? openPortalLB : null;
+window.openPortalComments = typeof openPortalComments !== 'undefined' ? openPortalComments : null;
+window.renderPortalPage = typeof renderPortalPage !== 'undefined' ? renderPortalPage : null;
+window.showT = typeof showT !== 'undefined' ? showT : null;
+`
+    const patchedJS = APP_JS + EXPOSE_GLOBALS
     try {
-      const appFn = new Function(APP_JS)
+      const appFn = new Function(patchedJS)
       appFn()
-      console.log('[CreatorPortal] APP_JS executed. window.S:', !!(window as any).S, '| window.openPortal:', !!(window as any).openPortal)
     } catch(e) {
-      // Expected: admin DOM elements missing cause errors in the init block
-      // These are non-fatal — S and openPortal are already defined before the error
+      // Non-fatal: admin DOM init errors expected (missing admin elements)
       console.warn('[CreatorPortal] APP_JS non-critical warning:', e instanceof Error ? e.message : String(e))
     }
+    console.log('[CreatorPortal] window.S exists:', !!(window as any).S)
+    console.log('[CreatorPortal] window.openPortal exists:', typeof (window as any).openPortal === 'function')
 
     // Step 2: Overwrite window.G with null-safe version AFTER APP_JS ran
     // This replaces the unsafe G() that APP_JS defined
