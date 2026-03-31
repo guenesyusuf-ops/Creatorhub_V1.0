@@ -2129,6 +2129,50 @@ G('portal-logout-btn')?.addEventListener('click',()=>{
 });
 `
 
+function LoadingScreen() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#f4f5f7',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexDirection: 'column', gap: 12, fontFamily: 'system-ui, sans-serif',
+      zIndex: 99999
+    }}>
+      <div style={{ fontSize: 28 }}>⏳</div>
+      <div style={{ fontSize: 14, color: '#888' }}>Creator Portal wird geladen...</div>
+    </div>
+  )
+}
+
+function ErrorScreen({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#f0f0f5', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', padding: 24,
+      fontFamily: 'system-ui, sans-serif'
+    }}>
+      <div style={{
+        background: '#fff', border: '1px solid #e8e8ec', borderRadius: 20,
+        padding: '44px 40px', width: '100%', maxWidth: 400, textAlign: 'center'
+      }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>🔗</div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111', margin: '0 0 10px' }}>
+          Link ungültig oder abgelaufen
+        </h2>
+        <p style={{ fontSize: 14, color: '#888', lineHeight: 1.6, margin: '0 0 28px' }}>
+          Bitte fordere einen neuen Link bei deinem Filapen-Team an.
+        </p>
+        <button onClick={onRetry} style={{
+          width: '100%', background: '#111', color: '#fff', fontWeight: 600,
+          fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer'
+        }}>
+          Neuen Link anfordern
+        </button>
+      </div>
+    </div>
+  )
+}
+
+
 type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
 
 // Prevent static generation — this page needs client-side auth
