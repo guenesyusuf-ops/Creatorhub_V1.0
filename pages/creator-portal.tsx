@@ -1932,12 +1932,16 @@ export default function CreatorPortalPage() {
     // Admin init functions become no-ops
     // window.__isCreatorRoute prevents admin startup paths from running
     const CREATOR_PREAMBLE = `
+var __safeList = {forEach:function(){},map:function(){return [];},filter:function(){return [];},querySelectorAll:function(){return __safeList;},length:0};
 var __nullProxy = new Proxy({}, {
   get: function(t,k) {
     if (k === 'addEventListener' || k === 'removeEventListener') return function(){};
     if (k === 'classList') return {add:function(){},remove:function(){},toggle:function(){},contains:function(){return false}};
     if (k === 'style') return new Proxy({},{set:function(){return true},get:function(){return ''}});
     if (k === 'innerHTML' || k === 'textContent' || k === 'value') return '';
+    if (k === 'querySelectorAll' || k === 'querySelector') return function(){return __safeList;};
+    if (k === 'forEach' || k === 'map' || k === 'filter') return function(){};
+    if (k === 'length') return 0;
     return __nullProxy;
   },
   set: function() { return true; }
@@ -1971,13 +1975,16 @@ window.showT = typeof showT !== 'undefined' ? showT : null;
     // This replaces the unsafe G() that APP_JS defined
     // All subsequent calls to G() (including openPortal) use this safe version
     const w = window as any
+    const __safeList: any = { forEach: () => {}, map: () => [], filter: () => [], length: 0, querySelectorAll: () => __safeList }
     const __nullProxy: any = new Proxy({}, {
       get: (_t: any, k: string) => {
         if (k === 'addEventListener' || k === 'removeEventListener') return () => {}
         if (k === 'classList') return { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false }
         if (k === 'style') return new Proxy({}, { set: () => true, get: () => '' })
         if (k === 'innerHTML' || k === 'textContent' || k === 'value') return ''
-        if (k === 'querySelector' || k === 'querySelectorAll') return () => null
+        if (k === 'querySelectorAll' || k === 'querySelector') return () => __safeList
+        if (k === 'forEach' || k === 'map' || k === 'filter') return () => {}
+        if (k === 'length') return 0
         return __nullProxy
       },
       set: () => true
