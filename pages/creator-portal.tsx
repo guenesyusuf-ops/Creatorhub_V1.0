@@ -2084,6 +2084,11 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
 
 type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
 
+// Prevent static generation — this page needs client-side auth
+export async function getServerSideProps() {
+  return { props: {} }
+}
+
 export default function CreatorPortalPage() {
   const router = useRouter()
   const ref = useRef<HTMLDivElement>(null)
@@ -2095,30 +2100,52 @@ export default function CreatorPortalPage() {
 
   // ── Step 1: Auth ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!router.isReady) return
-    if (authInitialized.current) return
-    authInitialized.current = true
+    // Run once on mount — poll for router.isReady
+    // Using [] deps + internal check is more reliable than [router.isReady]
+    // because router.isReady can miss the transition in some Next.js versions
+    function runAuth() {
+      if (authInitialized.current) return
+      authInitialized.current = true
 
-    const urlCode = router.query.code as string
-    const storedToken = localStorage.getItem('creator_token')
-    const storedCreator = localStorage.getItem('creator')
+      // Read code directly from window.location as fallback
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlCode = urlParams.get('code') || (router.query.code as string) || ''
+      const storedToken = localStorage.getItem('creator_token')
+      const storedCreator = localStorage.getItem('creator')
 
-    if (urlCode) {
-      verifyCode(urlCode)
-    } else if (storedToken && storedCreator) {
-      try {
-        const creator = JSON.parse(storedCreator)
-        setCreatorData(creator)
-        setAuthState('auth_ready')
-        router.replace('/creator-portal', undefined, { shallow: true })
-      } catch {
-        clearSession()
+      console.log('[CreatorPortal] Auth init | code:', urlCode || 'none', '| hasToken:', !!storedToken)
+
+      if (urlCode) {
+        verifyCode(urlCode)
+      } else if (storedToken && storedCreator) {
+        try {
+          const creator = JSON.parse(storedCreator)
+          console.log('[CreatorPortal] Session restored for:', creator.name)
+          setCreatorData(creator)
+          setAuthState('auth_ready')
+        } catch {
+          clearSession()
+          setAuthState('error')
+        }
+      } else {
+        console.log('[CreatorPortal] No code, no session → error')
         setAuthState('error')
       }
-    } else {
-      setAuthState('error')
     }
-  }, [router.isReady])
+
+    if (router.isReady) {
+      runAuth()
+    } else {
+      // Fallback: wait for router via timeout
+      // This handles edge cases where isReady event is missed
+      const timeout = setTimeout(runAuth, 500)
+      const cleanup = router.events?.on('routeChangeComplete', runAuth)
+      return () => {
+        clearTimeout(timeout)
+        router.events?.off('routeChangeComplete', runAuth)
+      }
+    }
+  }, [])
 
   async function verifyCode(code: string) {
     try {
@@ -2228,9 +2255,38 @@ export default function CreatorPortalPage() {
     }
 
     // Call openPortal — exactly like admin does
-    openPortal(cid)
+    try {
+      openPortal(cid)
+      console.log('[CreatorPortal] openPortal() called')
+    } catch(e) {
+      console.error('[CreatorPortal] openPortal threw:', e instanceof Error ? (e as Error).message : String(e))
+    }
 
-    // Override logout → /creator (not admin dashboard)
+    // Verify portal got .open class
+    const portalEl = document.getElementById('creator-portal')
+    const hasOpen = portalEl?.classList.contains('open') ?? false
+    console.log('[CreatorPortal] portal element exists:', !!portalEl, 'has .open:', hasOpen)
+
+    if (!hasOpen) {
+      // openPortal failed — try manually
+      console.warn('[CreatorPortal] Manually adding .open class')
+      if (portalEl) {
+        portalEl.classList.add('open')
+        // Also render the home page manually
+        if (appContext.renderPortalPage) {
+          try { appContext.renderPortalPage('home') } catch(e) {}
+        }
+      }
+    }
+
+    // Hide admin sidebar and main — portal covers them via z-index:500
+    // but explicitly hide to be safe
+    const adminSb = document.getElementById('admin-sb')
+    if (adminSb) adminSb.style.display = 'none'
+    const adminMain = document.querySelector('.main') as HTMLElement | null
+    if (adminMain) adminMain.style.display = 'none'
+
+    // Override logout → /creator
     const logoutBtn = document.getElementById('portal-logout-btn')
     if (logoutBtn) {
       logoutBtn.onclick = (e: Event) => {
@@ -2242,7 +2298,7 @@ export default function CreatorPortalPage() {
       }
     }
 
-    // Hide "Portal schließen" — creator has no admin to go back to
+    // Hide 'Portal schließen'
     const closeBtn = document.getElementById('close-portal')
     if (closeBtn) closeBtn.style.display = 'none'
 
@@ -2284,7 +2340,7 @@ export default function CreatorPortalPage() {
         ref={ref}
         style={{
           width: '100vw', height: '100vh', overflow: 'hidden',
-          opacity: authState === 'portal_ready' ? 1 : 0,
+          visibility: authState === 'portal_ready' ? 'visible' : 'hidden',
           pointerEvents: authState === 'portal_ready' ? 'auto' : 'none'
         }}
       />
