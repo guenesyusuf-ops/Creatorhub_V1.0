@@ -885,11 +885,12 @@ function openC(id){
   rCHdr();
   G('c-tabs').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===0));
   rCT('bilder');
-  const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+  const token=localStorage.getItem('token')||'';
+  if(!token)return;
   fetch('/api/uploads?creatorId='+String(id),{headers:{'Authorization':'Bearer '+token}})
     .then(r=>r.json()).then(uploads=>{
       if(!Array.isArray(uploads))return;
-      const tabMap={'bilder':'bilder','videos':'videos','roh':'roh','auswertung':'auswertung'};
+      const tabMap={'bilder':'bilder','videos':'videos','roh':'roh','auswertung':'auswertung','pdf':'bilder','link':'bilder','file':'bilder'};
       const newTabs=new Set();
       uploads.forEach(u=>{
         const tab=tabMap[u.tab]||'bilder';
@@ -911,7 +912,7 @@ function openC(id){
             tabEl.appendChild(dot);
           }
         });
-        fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({creatorId:String(id)})}).catch(()=>{});
+        const adminTok=localStorage.getItem('token')||'';if(adminTok){fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminTok},body:JSON.stringify({creatorId:String(id)})}).catch(()=>{});}
       }
       rCHdr();rCT(S.aCT);
     }).catch(()=>{});
@@ -2099,6 +2100,14 @@ function openChModal(item){
   G('modal-bg').classList.add('open');
 }
 
+// Expose key functions and state on window for React sync
+window.S = S;
+window.rDash = rDash;
+window.rCreators = rCreators;
+window.rCInvite = rCInvite;
+window.openC = openC;
+window.go = go;
+
 go('dashboard');rFP();
 // Mobile sidebar toggle
 G('menu-toggle')?.addEventListener('click',()=>{
@@ -2149,6 +2158,61 @@ export default function DashboardPage() {
       const fn = new Function(JS)
       fn()
     } catch(e) { console.error(e) }
+
+    // Load real creators from Supabase and sync into S.creators
+    const w = window as any
+    fetch('/api/creators', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(r => r.json())
+      .then((realCreators: any[]) => {
+        if (!Array.isArray(realCreators) || !w.S) return
+        // Merge real data into S.creators
+        // Keep demo flds structure but update with real IDs, names, status
+        realCreators.forEach((rc: any) => {
+          const existing = w.S.creators.find((c: any) =>
+            c.name === rc.name || String(c.id) === String(rc.id)
+          )
+          if (existing) {
+            // Update real fields from Supabase
+            existing.id = rc.id
+            existing.email = rc.email || existing.email
+            existing.status = rc.status || existing.status
+            existing.last_login = rc.last_login
+            existing.lastLogin = rc.last_login
+            existing.invited = !!rc.invite_code
+            existing.invitedAt = rc.invited_at
+          } else {
+            // New creator from Supabase not in demo data
+            w.S.creators.push({
+              id: rc.id,
+              name: rc.name,
+              ini: rc.initials || rc.name.slice(0,2).toUpperCase(),
+              color: rc.color_from || '#6366f1',
+              email: rc.email || '',
+              status: rc.status || 'ausstehend',
+              last_login: rc.last_login,
+              invited: !!rc.invite_code,
+              invitedAt: rc.invited_at,
+              tags: [],
+              flds: { bilder: [], videos: [], roh: [], auswertung: [] },
+              notizen: '', notizenCreator: '',
+              age: 0, gender: 'female', country: 'DE',
+              desc: '', photo: null,
+              up: new Date(),
+              kids: false, kidsAges: [], kidsOnVid: false,
+              verguetung: 'provision', provision: '', fixbetrag: ''
+            })
+          }
+        })
+        // Re-render current page
+        if (w.rDash) try { w.rDash() } catch(e) {}
+        if (w.rCreators) try { w.rCreators() } catch(e) {}
+        if (w.rCInvite) try { w.rCInvite() } catch(e) {}
+        console.log('[Dashboard] Synced', realCreators.length, 'creators from Supabase')
+      })
+      .catch((e: any) => console.warn('[Dashboard] Creator sync failed:', e.message))
+
     return () => { try { document.head.removeChild(st) } catch(e){} }
   }, [])
 
