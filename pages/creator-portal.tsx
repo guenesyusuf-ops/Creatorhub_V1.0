@@ -1932,21 +1932,16 @@ export default function CreatorPortalPage() {
     // Admin init functions become no-ops
     // window.__isCreatorRoute prevents admin startup paths from running
     const CREATOR_PREAMBLE = `
-var __nullProxy = new Proxy(function(){}, {
+var __nullProxy = new Proxy({}, {
   get: function(t,k) {
     if (k === 'addEventListener' || k === 'removeEventListener') return function(){};
     if (k === 'classList') return {add:function(){},remove:function(){},toggle:function(){},contains:function(){return false}};
-    if (k === 'style') return new Proxy(function(){},{set:function(){return true},get:function(){return ''},apply:function(){return ''}});
+    if (k === 'style') return new Proxy({},{set:function(){return true},get:function(){return ''}});
     if (k === 'innerHTML' || k === 'textContent' || k === 'value') return '';
-    if (k === 'length') return 0;
-    if (k === 'forEach' || k === 'map' || k === 'filter' || k === 'reduce') return function(){};
-    if (k === Symbol.iterator) return function(){return {next:function(){return {done:true}}}};
     return __nullProxy;
   },
-  set: function() { return true; },
-  apply: function() { return __nullProxy; }
+  set: function() { return true; }
 });
-
 window.__isCreatorRoute = true;
 `
 
@@ -1961,15 +1956,7 @@ window.openPortalComments = typeof openPortalComments !== 'undefined' ? openPort
 window.renderPortalPage = typeof renderPortalPage !== 'undefined' ? renderPortalPage : null;
 window.showT = typeof showT !== 'undefined' ? showT : null;
 `
-       // Prepend CREATOR_PREAMBLE (defines __nullProxy) and replace unsafe G()
-    // with a null-safe version so admin DOM lookups silently no-op
-    // instead of throwing and aborting before EXPOSE_GLOBALS runs.
-    const safeAppJS = APP_JS.replace(
-      'const G=id=>document.getElementById(id);',
-      'const G=id=>{const el=document.getElementById(id);return el!==null?el:__nullProxy;};'
-    )
-    const patchedJS = CREATOR_PREAMBLE + safeAppJS + EXPOSE_GLOBALS
-
+    const patchedJS = APP_JS + EXPOSE_GLOBALS
     try {
       const appFn = new Function(patchedJS)
       appFn()
@@ -1984,21 +1971,15 @@ window.showT = typeof showT !== 'undefined' ? showT : null;
     // This replaces the unsafe G() that APP_JS defined
     // All subsequent calls to G() (including openPortal) use this safe version
     const w = window as any
-        const __nullProxy: any = new Proxy(function(){}, {
-      get: (_t: any, k: string | symbol) => {
+    const __nullProxy: any = new Proxy({}, {
+      get: (_t: any, k: string) => {
         if (k === 'addEventListener' || k === 'removeEventListener') return () => {}
         if (k === 'classList') return { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false }
-        if (k === 'style') return new Proxy(function(){}, { set: () => true, get: () => '', apply: () => '' })
+        if (k === 'style') return new Proxy({}, { set: () => true, get: () => '' })
         if (k === 'innerHTML' || k === 'textContent' || k === 'value') return ''
-        if (k === 'length') return 0
-        if (k === 'forEach' || k === 'map' || k === 'filter' || k === 'reduce') return () => {}
-        if (k === Symbol.iterator) return () => ({ next: () => ({ done: true }) })
+        if (k === 'querySelector' || k === 'querySelectorAll') return () => null
         return __nullProxy
       },
-      set: () => true,
-      apply: () => __nullProxy
-    })
-
       set: () => true
     })
     w.G = function(id: string) {
