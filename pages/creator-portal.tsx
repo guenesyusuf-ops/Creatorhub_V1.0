@@ -1932,16 +1932,21 @@ export default function CreatorPortalPage() {
     // Admin init functions become no-ops
     // window.__isCreatorRoute prevents admin startup paths from running
     const CREATOR_PREAMBLE = `
-var __nullProxy = new Proxy({}, {
+var __nullProxy = new Proxy(function(){}, {
   get: function(t,k) {
     if (k === 'addEventListener' || k === 'removeEventListener') return function(){};
     if (k === 'classList') return {add:function(){},remove:function(){},toggle:function(){},contains:function(){return false}};
-    if (k === 'style') return new Proxy({},{set:function(){return true},get:function(){return ''}});
+    if (k === 'style') return new Proxy(function(){},{set:function(){return true},get:function(){return ''},apply:function(){return ''}});
     if (k === 'innerHTML' || k === 'textContent' || k === 'value') return '';
+    if (k === 'length') return 0;
+    if (k === 'forEach' || k === 'map' || k === 'filter' || k === 'reduce') return function(){};
+    if (k === Symbol.iterator) return function(){return {next:function(){return {done:true}}}};
     return __nullProxy;
   },
-  set: function() { return true; }
+  set: function() { return true; },
+  apply: function() { return __nullProxy; }
 });
+
 window.__isCreatorRoute = true;
 `
 
@@ -1979,15 +1984,21 @@ window.showT = typeof showT !== 'undefined' ? showT : null;
     // This replaces the unsafe G() that APP_JS defined
     // All subsequent calls to G() (including openPortal) use this safe version
     const w = window as any
-    const __nullProxy: any = new Proxy({}, {
-      get: (_t: any, k: string) => {
+        const __nullProxy: any = new Proxy(function(){}, {
+      get: (_t: any, k: string | symbol) => {
         if (k === 'addEventListener' || k === 'removeEventListener') return () => {}
         if (k === 'classList') return { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false }
-        if (k === 'style') return new Proxy({}, { set: () => true, get: () => '' })
+        if (k === 'style') return new Proxy(function(){}, { set: () => true, get: () => '', apply: () => '' })
         if (k === 'innerHTML' || k === 'textContent' || k === 'value') return ''
-        if (k === 'querySelector' || k === 'querySelectorAll') return () => null
+        if (k === 'length') return 0
+        if (k === 'forEach' || k === 'map' || k === 'filter' || k === 'reduce') return () => {}
+        if (k === Symbol.iterator) return () => ({ next: () => ({ done: true }) })
         return __nullProxy
       },
+      set: () => true,
+      apply: () => __nullProxy
+    })
+
       set: () => true
     })
     w.G = function(id: string) {
