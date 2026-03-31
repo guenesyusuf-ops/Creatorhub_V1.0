@@ -852,24 +852,25 @@ function cRowsHTML(list){
 
 function attachCR(container){
   // Click on full creator row → open creator profile
+  // Uses String comparison to support both integer (demo) and UUID (Supabase) IDs
   container.querySelectorAll('.cr[data-cid]').forEach(row=>{
     row.style.cursor='pointer';
     row.addEventListener('click',e=>{
       if(e.target.closest('.dot-btn')||e.target.closest('[data-dot-c]')||e.target.closest('.social-badge'))return;
-      const cid=+row.dataset.cid;
+      const cid=row.dataset.cid;
       if(S.page!=='creators'){go('creators');setTimeout(()=>openC(cid),80);}
       else openC(cid);
     });
   });
   container.querySelectorAll('[data-open-c]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation();
-    const cid=+el.dataset.openC;
+    const cid=el.dataset.openC;
     if(S.page!=='creators'){go('creators');setTimeout(()=>openC(cid),80);}
     else openC(cid);
   }));
   container.querySelectorAll('[data-dot-c]').forEach(btn=>btn.addEventListener('click',e=>{
     e.stopPropagation();
-    const c=S.creators.find(x=>x.id===+btn.dataset.dotC);
+    const c=S.creators.find(x=>String(x.id)===String(btn.dataset.dotC));
     if(c)showDot(btn,()=>openM('editC',c.id),()=>delC(c.id,c.name),()=>openPortal(c.id));
   }));
 }
@@ -878,7 +879,7 @@ function showCL(){G('c-lv').style.display='block';G('c-dv').style.display='none'
 function rCreators(){const list=S.creators.filter(c=>!S.search||c.name.toLowerCase().includes(S.search.toLowerCase()));G('c-list').innerHTML=cRowsHTML(list);attachCR(G('c-list'));}
 
 function openC(id){
-  const c=S.creators.find(x=>x.id===id);if(!c)return;
+  const c=S.creators.find(x=>String(x.id)===String(id));if(!c)return;
   S.aC=c;S.aCT='bilder';
   G('c-lv').style.display='none';G('c-dv').style.display='block';
   G('tb-t').textContent=c.name;
@@ -1384,7 +1385,7 @@ function rCInvite(){
     // Resend button
     G('ci-list').querySelectorAll('[data-resend]').forEach(btn=>{
       btn.addEventListener('click',async()=>{
-        const cid=+btn.dataset.resend;const c=S.creators.find(x=>x.id===cid);if(!c||!c.email)return showT('Keine E-Mail hinterlegt');
+        const cid=btn.dataset.resend;const c=S.creators.find(x=>String(x.id)===String(cid));if(!c||!c.email)return showT('Keine E-Mail hinterlegt');
         showT('⏳ Neuer Link wird gesendet...');
         try{
           const token=localStorage.getItem('token')||'';
@@ -1398,7 +1399,7 @@ function rCInvite(){
     // Revoke button
     G('ci-list').querySelectorAll('[data-revoke]').forEach(btn=>{
       btn.addEventListener('click',async()=>{
-        const cid=+btn.dataset.revoke;const c=S.creators.find(x=>x.id===cid);if(!c)return;
+        const cid=btn.dataset.revoke;const c=S.creators.find(x=>String(x.id)===String(cid));if(!c)return;
         if(!confirm('Zugang für '+c.name+' wirklich entziehen? Der Link funktioniert dann nicht mehr.'))return;
         try{
           const token=localStorage.getItem('token')||'';
@@ -2159,7 +2160,8 @@ export default function DashboardPage() {
       fn()
     } catch(e) { console.error(e) }
 
-    // Load real creators from Supabase and sync into S.creators
+    // Load real creators from Supabase
+    // ONLY show creators that exist in Supabase — no demo data
     const w = window as any
     fetch('/api/creators', {
       headers: { 'Authorization': 'Bearer ' + token }
@@ -2167,49 +2169,63 @@ export default function DashboardPage() {
       .then(r => r.json())
       .then((realCreators: any[]) => {
         if (!Array.isArray(realCreators) || !w.S) return
-        // Merge real data into S.creators
-        // Keep demo flds structure but update with real IDs, names, status
-        realCreators.forEach((rc: any) => {
+
+        // Filter: only real creators with a name (skip empty/test entries)
+        const validCreators = realCreators.filter((rc: any) =>
+          rc.name && rc.name.trim().length > 0
+        )
+
+        // Build new S.creators from Supabase data only
+        // Preserve existing flds if creator was already in demo data (same name)
+        const newCreators = validCreators.map((rc: any) => {
+          // Find existing demo entry to preserve flds/notes/etc
           const existing = w.S.creators.find((c: any) =>
-            c.name === rc.name || String(c.id) === String(rc.id)
+            String(c.id) === String(rc.id) || c.name === rc.name
           )
-          if (existing) {
-            // Update real fields from Supabase
-            existing.id = rc.id
-            existing.email = rc.email || existing.email
-            existing.status = rc.status || existing.status
-            existing.last_login = rc.last_login
-            existing.lastLogin = rc.last_login
-            existing.invited = !!rc.invite_code
-            existing.invitedAt = rc.invited_at
-          } else {
-            // New creator from Supabase not in demo data
-            w.S.creators.push({
-              id: rc.id,
-              name: rc.name,
-              ini: rc.initials || rc.name.slice(0,2).toUpperCase(),
-              color: rc.color_from || '#6366f1',
-              email: rc.email || '',
-              status: rc.status || 'ausstehend',
-              last_login: rc.last_login,
-              invited: !!rc.invite_code,
-              invitedAt: rc.invited_at,
-              tags: [],
-              flds: { bilder: [], videos: [], roh: [], auswertung: [] },
-              notizen: '', notizenCreator: '',
-              age: 0, gender: 'female', country: 'DE',
-              desc: '', photo: null,
-              up: new Date(),
-              kids: false, kidsAges: [], kidsOnVid: false,
-              verguetung: 'provision', provision: '', fixbetrag: ''
-            })
+          return {
+            // Base structure
+            id: rc.id,
+            name: rc.name,
+            ini: rc.initials || rc.name.slice(0,2).toUpperCase(),
+            color: rc.color_from || existing?.color || '#6366f1',
+            email: rc.email || existing?.email || '',
+            status: rc.status || 'ausstehend',
+            last_login: rc.last_login,
+            lastLogin: rc.last_login,
+            invite_code: rc.invite_code,
+            invited: !!rc.invite_code,
+            invitedAt: rc.invited_at,
+            // Preserve local data if exists
+            tags: existing?.tags || [],
+            flds: existing?.flds || { bilder: [], videos: [], roh: [], auswertung: [] },
+            notizen: existing?.notizen || '',
+            notizenCreator: existing?.notizenCreator || '',
+            age: existing?.age || 0,
+            gender: existing?.gender || 'female',
+            country: existing?.country || 'DE',
+            desc: existing?.desc || '',
+            photo: existing?.photo || null,
+            up: existing?.up || new Date(),
+            kids: existing?.kids || false,
+            kidsAges: existing?.kidsAges || [],
+            kidsOnVid: existing?.kidsOnVid || false,
+            verguetung: existing?.verguetung || 'provision',
+            provision: existing?.provision || '',
+            fixbetrag: existing?.fixbetrag || '',
+            vertrag: existing?.vertrag || null,
+            vertragsname: existing?.vertragsname || '',
+            instagram: existing?.instagram || '',
           }
         })
-        // Re-render current page
+
+        // Replace S.creators entirely with real data
+        w.S.creators = newCreators
+        console.log('[Dashboard] Loaded', newCreators.length, 'creators from Supabase')
+
+        // Re-render
         if (w.rDash) try { w.rDash() } catch(e) {}
         if (w.rCreators) try { w.rCreators() } catch(e) {}
         if (w.rCInvite) try { w.rCInvite() } catch(e) {}
-        console.log('[Dashboard] Synced', realCreators.length, 'creators from Supabase')
       })
       .catch((e: any) => console.warn('[Dashboard] Creator sync failed:', e.message))
 
