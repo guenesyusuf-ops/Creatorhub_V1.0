@@ -632,40 +632,7 @@ const S={
   tags:['Fashion','Beauty','Lifestyle','Tech','Sport','Food','Brand'],
   bulkSel:[],bulkMode:false,
   activeLbFile:null,activeLbFld:null,
-  creators:[
-    {id:1,name:'Mira Hartley',ini:'MH',color:'#6366f1',age:28,email:'mira@example.com',gender:'female',country:'DE',
-     tags:['Fashion','Beauty'],desc:'Family Life Creator',up:new Date('2024-03-22'),photo:null,
-     instagram:'https://instagram.com/mirahartley',kids:true,kidsAges:['4','7'],kidsOnVid:true,
-     verguetung:'provision',provision:'15',fixbetrag:'',notizen:'Macht keine Produktvergleiche. Bevorzugt Story-Format. Liefert immer pünktlich.',notizenCreator:'Bitte immer Story-Format verwenden. Deadline im Blick behalten!',
-     vertrag:null,vertragsname:'',invited:true,
-     flds:{bilder:[{id:101,name:'Winter Lookbook',batch:'Winter Batch',date:'2024-01-15',deadline:'2024-12-31',prods:['Serum XY'],tags:['Fashion'],files:[
-       {id:1001,name:'lookbook_01.jpg',type:'image',url:null,size:'2.4 MB',uploadedAt:null,comments:[]},
-       {id:1002,name:'product_shot.jpg',type:'image',url:null,size:'1.8 MB',uploadedAt:'2024-01-20',comments:['Bitte nochmal ohne Logo – Admin, 20.01.2024']}
-     ]},{id:102,name:'Spring Collection',batch:'Spring',date:'2024-03-10',deadline:'',prods:[],tags:[],files:[]}],
-     videos:[{id:103,name:'Brand Videos',batch:'Feb',date:'2024-02-20',deadline:'2025-06-01',prods:[],tags:[],files:[{id:1003,name:'brand_video.mp4',type:'video',url:null,size:'45 MB',uploadedAt:null,comments:[]}]}],
-     roh:[],auswertung:[]}},
-    {id:2,name:'Sophie Klein',ini:'SK',color:'#ec4899',age:24,email:'sophie@example.com',gender:'female',country:'DE',
-     tags:['Lifestyle'],desc:'Lifestyle & Travel',up:new Date('2024-03-20'),photo:null,
-     instagram:'https://instagram.com/sophieklein_',kids:false,kidsAges:[],kidsOnVid:false,
-     verguetung:'fix',provision:'',fixbetrag:'800',notizen:'Bevorzugt Reels. Keine politischen Themen.',notizenCreator:'',
-     vertrag:null,vertragsname:'',invited:true,
-     flds:{bilder:[{id:201,name:'Summer Vibes',batch:'Summer',date:'2024-06-01',deadline:'',prods:[],tags:['Lifestyle'],files:[{id:2001,name:'summer_01.jpg',type:'image',url:null,size:'3.1 MB',uploadedAt:'2024-06-05',comments:[]}]}],
-     videos:[{id:202,name:'Collab',batch:'Collab',date:'2024-07-15',deadline:'',prods:[],tags:[],files:[{id:2002,name:'collab.mp4',type:'video',url:null,size:'88 MB',uploadedAt:null,comments:[]}]}],roh:[],auswertung:[]}},
-    {id:3,name:'Lucas Bauer',ini:'LB',color:'#06b6d4',age:31,email:'lucas@example.com',gender:'male',country:'AT',
-     tags:['Tech'],desc:'Tech & Gadgets',up:new Date('2024-02-10'),photo:null,instagram:'',kids:false,kidsAges:[],kidsOnVid:false,
-     verguetung:'beides',provision:'10',fixbetrag:'500',notizen:'Nur Tech-Produkte. Macht ausführliche Reviews.',
-     vertrag:null,vertragsname:'',invited:false,
-     flds:{bilder:[],videos:[{id:301,name:'Reviews',batch:'Rev',date:'2024-03-05',deadline:'2025-04-01',prods:[],tags:['Tech'],files:[{id:3001,name:'review.mp4',type:'video',url:null,size:'95 MB',uploadedAt:null,comments:[]}]}],roh:[],auswertung:[]}},
-    {id:4,name:'Anna Sommer',ini:'AS',color:'#f97316',age:26,email:'anna@example.com',gender:'female',country:'DE',
-     tags:['Food'],desc:'Food & Lifestyle',up:new Date('2024-03-22'),photo:null,instagram:'https://instagram.com/annasommer.food',kids:true,kidsAges:['9'],kidsOnVid:false,
-     verguetung:'fix',provision:'',fixbetrag:'600',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:false,
-     flds:{bilder:[{id:401,name:'Recipe Shots',batch:'April',date:'2024-04-10',deadline:'',prods:[],tags:['Food'],files:[{id:4001,name:'recipe_01.jpg',type:'image',url:null,size:'2.1 MB',uploadedAt:null,comments:[]}]}],videos:[],roh:[],auswertung:[]}},
-    {id:5,name:'Ben Müller',ini:'BM',color:'#84cc16',age:29,email:'ben@example.com',gender:'male',country:'DE',
-     tags:['Sport'],desc:'Sport & Fitness',up:new Date('2024-03-18'),photo:null,instagram:'',kids:false,kidsAges:[],kidsOnVid:false,
-     verguetung:'provision',provision:'12',fixbetrag:'',notizen:'',notizenCreator:'',vertrag:null,vertragsname:'',invited:false,
-     flds:{bilder:[{id:501,name:'Gym Shots',batch:'Feb',date:'2024-02-15',deadline:'',prods:[],tags:['Sport'],files:[{id:5001,name:'gym_01.jpg',type:'image',url:null,size:'2.8 MB',uploadedAt:null,comments:[]}]}],videos:[],roh:[],auswertung:[]}},
-  ],
-  team:[{id:1,name:'Admin User',email:'admin@filapen.de',role:'admin',status:'active',you:true},{id:2,name:'Julia Wagner',email:'julia@filapen.de',role:'admin',status:'active'},{id:3,name:'Tom Becker',email:'tom@filapen.de',role:'read',status:'active'},{id:4,name:'Lena Müller',email:'lena@filapen.de',role:'read',status:'pending'}],
+  creators:[],
   produkte:[
     {id:1,name:'Serum XY',cat:'Skincare',icon:'💄',url:null,tags:['Beauty'],briefings:['Hebe die feuchtigkeitsspendende Wirkung hervor','Zeige Vorher/Nachher wenn möglich'],skripte:['Hook: Meine Haut war noch nie so weich...','CTA: Link in Bio für 20% Rabatt'],lernvideos:[]},
     {id:2,name:'Protein Shake',cat:'Fitness',icon:'💪',url:null,tags:['Sport'],briefings:['Zeige Zubereitung','Erwähne 30g Protein pro Portion'],skripte:['Hook: Der Shake der meinen Gym-Alltag verändert hat'],lernvideos:[]}
@@ -1190,8 +1157,21 @@ function delFile(fid,fldId){
     for(const t of Object.keys(S.aC.flds)){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){f.files=f.files.filter(x=>x.id!==fid);rFiles(f);rCHdr();showT('Datei gelöscht ✓');return;}}
   });
 }
-function delFld(fid,tab,name){askConfirm(\`Ordner "\${name}" löschen?\`,()=>{S.aC.flds[tab]=S.aC.flds[tab].filter(f=>f.id!==fid);rCT(tab);rCHdr();showT('Ordner gelöscht ✓');});}
-function delC(id,name){askConfirm(\`Creator "\${name}" löschen?\`,()=>{S.creators=S.creators.filter(c=>c.id!==id);if(S.aC?.id===id)showCL();rCreators();uBdg();rDash();showT(\`"\${name}" gelöscht ✓\`);});}
+function delFld(fid,tab,name){askConfirm(\`Ordner "\${name}" löschen?\`,async()=>{
+  const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+  try{await fetch('/api/folders',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:String(fid)})});}catch(e){}
+  S.aC.flds[tab]=S.aC.flds[tab].filter(f=>String(f.id)!==String(fid));rCT(tab);rCHdr();showT('Ordner gelöscht ✓');
+});}
+function delC(id,name){askConfirm(\`Creator "\${name}" wirklich löschen? Der Zugang wird sofort entzogen.\`,async()=>{
+  const token=localStorage.getItem('token')||'';
+  try{
+    const r=await fetch('/api/creators',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:String(id)})});
+    if(!r.ok){const d=await r.json();showT('Fehler: '+(d.error||'Löschen fehlgeschlagen'));return;}
+  }catch(e){showT('Netzwerkfehler');return;}
+  S.creators=S.creators.filter(c=>String(c.id)!==String(id));
+  if(String(S.aC?.id)===String(id))showCL();
+  rCreators();uBdg();rDash();showT(\`"\${name}" gelöscht ✓\`);
+});}
 function backC(){S.aC=null;showCL();G('tb-t').textContent='Creator';rCreators();}
 
 // ── SEARCH ────────────────────────────────────────────────────────────────
@@ -1230,7 +1210,7 @@ function rProdukte(){
   G('add-p-fc')?.addEventListener('click',()=>openM('addP'));
   G('p-grid').querySelectorAll('[data-pd]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const pid=+btn.dataset.pd;const p=S.produkte.find(x=>x.id===pid);if(p)showDot(btn,()=>openM('editP',pid),()=>delP(pid,p.name));}));
 }
-function delP(id,name){askConfirm(\`Produkt "\${name}" löschen?\`,()=>{S.produkte=S.produkte.filter(p=>p.id!==id);rProdukte();uBdg();showT(\`"\${name}" gelöscht ✓\`);});}
+function delP(id,name){askConfirm(\`Produkt "\${name}" löschen?\`,()=>{S.produkte=S.produkte.filter(p=>p.id!==id);rProdukte();uBdg();showT(\`"\${name}" gelöscht ✓\`);saveAppData('produkte',S.produkte);});}
 
 // ── PROJEKTE ──────────────────────────────────────────────────────────────
 function showPJL(){G('pj-lv').style.display='block';G('pj-dv').style.display='none';}
@@ -1287,7 +1267,7 @@ function rPJT(tab){
   if(!all.length){G('pj-tc').innerHTML=\`<div class="empty"><div style="font-size:22px">\${tab==='bilder'?'🖼️':'🎬'}</div><div style="margin-top:4px">Ordner-Tag <strong>"\${p.name}"</strong> zuweisen um Inhalte hier zu sehen</div></div>\`;return;}
   G('pj-tc').innerHTML=\`<div class="file-grid">\${all.map(f=>\`<div class="ficard"><div class="fi-thumb">\${f.url?(f.type==='image'?\`<img src="\${f.url}">\`:\`<video src="\${f.url}"></video>\`):\`<span>\${f.type==='image'?'🖼️':'🎬'}</span>\`}</div><div class="fi-info"><div class="fi-name">\${f.name}</div><div class="fi-meta" style="display:flex;align-items:center;gap:3px"><div style="width:7px;height:7px;border-radius:50%;background:\${f.ccolor}"></div>\${f.cname}</div></div></div>\`).join('')}</div>\`;}
 function backPJ(){S.aPJ=null;showPJL();G('tb-t').textContent='Projekte';G('tb-action').innerHTML='';rProjekte();}
-function delPJ(id,name){askConfirm(\`Projekt "\${name}" löschen?\`,()=>{S.projekte=S.projekte.filter(p=>p.id!==id);if(S.aPJ?.id===id)backPJ();else rProjekte();uBdg();showT(\`"\${name}" gelöscht ✓\`);});}
+function delPJ(id,name){askConfirm(\`Projekt "\${name}" löschen?\`,()=>{S.projekte=S.projekte.filter(p=>p.id!==id);if(S.aPJ?.id===id)backPJ();else rProjekte();uBdg();showT(\`"\${name}" gelöscht ✓\`);saveAppData('projekte',S.projekte);});}
 
 // ── KATEGORIEN ────────────────────────────────────────────────────────────
 function showKL(){G('k-lv').style.display='block';G('k-dv').style.display='none';}
@@ -1320,7 +1300,7 @@ function rKF(af,tag,search){
   if(search)r=r.filter(f=>f.name.toLowerCase().includes(search.toLowerCase())||f.cname.toLowerCase().includes(search.toLowerCase()));
   G('k-fg').innerHTML=r.map(f=>{const d=new Date(f.date).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});const tg=f.tags.map(t=>\`<span class="tag" style="background:#f0fdf4;color:#166634;border-color:#bbf7d0;font-size:9px">\${t}</span>\`).join('');return\`<div class="fcard"><div style="font-size:18px;margin-bottom:5px">\${S.aK?.icon||'📁'}</div><div style="font-size:11px;font-weight:600;margin-bottom:2px">\${f.name}</div><div style="font-size:10px;color:var(--muted);line-height:1.5">📅 \${d}<br>👤 \${f.cname}<br>📁 \${f.files.length} Dateien</div>\${tg?\`<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px">\${tg}</div>\`:''}</div>\`;}).join('')||\`<div class="empty" style="grid-column:1/-1">Keine Ergebnisse</div>\`;}
 function backK(){S.aK=null;showKL();G('tb-t').textContent='Kategorien';G('tb-action').innerHTML='';rKat();}
-function delK(id,name){askConfirm(\`"\${name}" löschen?\`,()=>{S.kat=S.kat.filter(k=>k.id!==id);rKat();showT(\`"\${name}" gelöscht ✓\`);});}
+function delK(id,name){askConfirm(\`"\${name}" löschen?\`,()=>{S.kat=S.kat.filter(k=>k.id!==id);rKat();showT(\`"\${name}" gelöscht ✓\`);saveAppData('kat',S.kat);});}
 
 // ── TEAM ──────────────────────────────────────────────────────────────────
 function rTeam(){
@@ -1733,9 +1713,27 @@ function confirmM(){
     const notizen=G('m-notiz').value;
     const kids=G('m-kids').classList.contains('on');const kidsAges=[...G('m-ka').selectedOptions].map(o=>o.value);const kidsOnVid=G('m-kv').classList.contains('on');
     const pf=G('m-ph').files[0];const color=CL[S.creators.length%CL.length];
-    const apply=(photo)=>{
-      if(isE){const c=S.creators.find(x=>x.id===S.form.cid);if(!c)return;Object.assign(c,{name,ini,email,instagram,age,desc,gender,country,tags,verguetung,provision,fixbetrag,notizen,kids,kidsAges,kidsOnVid});if(photo)c.photo=photo;if(S.aC?.id===S.form.cid)rCHdr();showT(\`"\${name}" aktualisiert ✓\`);}
-      else{S.creators.push({id:uid(),name,ini,color,age,email,instagram,gender,country,tags,desc,up:new Date(),photo:photo||null,verguetung,provision,fixbetrag,notizen,kids,kidsAges,kidsOnVid,vertrag:null,vertragsname:'',invited:false,flds:{bilder:[],videos:[],roh:[],auswertung:[]}});showT(\`"\${name}" hinzugefügt ✓\`);}
+    const apply=async(photo)=>{
+      const token=localStorage.getItem('token')||'';
+      const payload={name,initials:ini,email,instagram,age,gender,country,tags,description:desc,
+        verguetung,provision,fixbetrag,notizen,notizen_creator:notizen,
+        kids,kids_ages:kidsAges,kids_on_vid:kidsOnVid,...(photo?{photo}:{})};
+      if(isE){
+        const c=S.creators.find(x=>String(x.id)===String(S.form.cid));if(!c)return;
+        try{
+          const r=await fetch('/api/creators',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:String(c.id),...payload})});
+          if(!r.ok){showT('Fehler beim Speichern');return;}
+        }catch(e){showT('Netzwerkfehler');return;}
+        Object.assign(c,{name,ini,email,instagram,age,desc,gender,country,tags,verguetung,provision,fixbetrag,notizen,kids,kidsAges,kidsOnVid});
+        if(photo)c.photo=photo;if(S.aC?.id===c.id)rCHdr();showT(\`"\${name}" gespeichert ✓\`);
+      }else{
+        try{
+          const r=await fetch('/api/creators',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({...payload,color_from:color})});
+          const d=await r.json();if(!r.ok){showT('Fehler: '+(d.error||''));return;}
+          S.creators.push({id:d.id,name,ini,color,age,email,instagram,gender,country,tags,desc,up:new Date(),photo:photo||null,verguetung,provision,fixbetrag,notizen,kids,kidsAges,kidsOnVid,vertrag:null,vertragsname:'',invited:false,status:'ausstehend',flds:{bilder:[],videos:[],roh:[],auswertung:[]}});
+          showT(\`"\${name}" angelegt ✓\`);
+        }catch(e){showT('Netzwerkfehler');return;}
+      }
       rCreators();uBdg();rDash();closeM();
     };
     if(pf){const r=new FileReader();r.onload=e=>apply(e.target.result);r.readAsDataURL(pf);}else apply(null);return;
@@ -1745,8 +1743,22 @@ function confirmM(){
     const batch=G('m-fb').value.trim()||name;const date=G('m-fd').value||new Date().toISOString().slice(0,10);
     const deadline=G('m-fdl').value||'';
     const prods=[...G('m-fp').selectedOptions].map(o=>o.value);const tags=[...G('m-ft').selectedOptions].map(o=>o.value);
-    if(isE){const fld=S.aC?.flds[tab]?.find(f=>f.id===S.form.fid);if(fld)Object.assign(fld,{name,batch,date,deadline,prods,tags});showT('Aktualisiert ✓');}
-    else{if(!S.aC)return;S.aC.flds[tab].push({id:uid(),name,batch,date,deadline,prods,tags,files:[]});showT(\`"\${name}" angelegt ✓\`);}
+    const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
+    if(isE){
+      const fld=S.aC?.flds[tab]?.find(f=>f.id===S.form.fid);if(!fld)return;
+      fetch('/api/folders',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({id:String(fld.id),name,batch,date,deadline,prods,tags})}).catch(()=>{});
+      Object.assign(fld,{name,batch,date,deadline,prods,tags});showT('Aktualisiert ✓');
+    }else{
+      if(!S.aC)return;
+      fetch('/api/folders',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({creator_id:String(S.aC.id),tab,name,batch,date,deadline,prods,tags})})
+        .then(r=>r.json()).then(d=>{
+          if(d.id){const fld=S.aC?.flds[tab]?.find(f=>f.id==='__tmp__');if(fld)fld.id=d.id;}
+        }).catch(()=>{});
+      S.aC.flds[tab].push({id:'__tmp__',name,batch,date,deadline,prods,tags,files:[]});
+      showT(\`"\${name}" angelegt ✓\`);
+    }
     closeM();rCT(tab);rCHdr();return;
   }
   if(type==='upload'){
@@ -1784,18 +1796,18 @@ function confirmM(){
   if(type==='addP'||type==='editP'){
     const isE=type==='editP';const name=G('m-pn').value.trim();if(!name){showT('Name erforderlich');return;}
     const cat=G('m-pc').value.trim();const icon=G('m-pe').value.trim()||'📦';const tags=[...G('m-pt').selectedOptions].map(o=>o.value);const pf=G('m-pi').files[0];
-    const apply=(url)=>{if(isE){const i=S.produkte.findIndex(p=>p.id===S.form.pid);if(i>=0)S.produkte[i]={...S.produkte[i],name,cat,icon,tags,...(url?{url}:{})};showT('Aktualisiert ✓');}else{S.produkte.push({id:uid(),name,cat,icon,tags,url:url||null,briefings:[],skripte:[],lernvideos:[]});showT(\`"\${name}" hinzugefügt ✓\`);}rProdukte();uBdg();closeM();};
+    const apply=(url)=>{if(isE){const i=S.produkte.findIndex(p=>p.id===S.form.pid);if(i>=0)S.produkte[i]={...S.produkte[i],name,cat,icon,tags,...(url?{url}:{})};showT('Aktualisiert ✓');}else{S.produkte.push({id:uid(),name,cat,icon,tags,url:url||null,briefings:[],skripte:[],lernvideos:[]});showT(\`"\${name}" hinzugefügt ✓\`);}rProdukte();uBdg();closeM();saveAppData('produkte',S.produkte);};
     if(pf){const r=new FileReader();r.onload=e=>apply(e.target.result);r.readAsDataURL(pf);}else apply(null);return;
   }
   if(type==='addPJ'||type==='editPJ'){
     const isE=type==='editPJ';const name=G('m-pjn').value.trim();if(!name){showT('Name erforderlich');return;}
     const pids=[...G('m-pjp').selectedOptions].map(o=>+o.value).filter(Boolean);const aktion=G('m-pja').value.trim();const start=G('m-pjs').value;const count=+G('m-pjc').value||1;const pf=G('m-pji').files[0];
-    const apply=(url)=>{if(isE){const i=S.projekte.findIndex(p=>p.id===S.form.pjid);if(i>=0){const old=S.projekte[i];S.projekte[i]={...old,name,pids,aktion,start,count,...(url?{url}:{})};if(S.aPJ?.id===S.form.pjid){S.aPJ=S.projekte[i];rPJHdr();rPJT(S.aPT);}}showT('Aktualisiert ✓');}else{S.projekte.push({id:uid(),name,pids,aktion,start,count,cids:[],status:'planned',url:url||null});showT(\`"\${name}" erstellt ✓\`);}rProjekte();uBdg();closeM();};
+    const apply=(url)=>{if(isE){const i=S.projekte.findIndex(p=>p.id===S.form.pjid);if(i>=0){const old=S.projekte[i];S.projekte[i]={...old,name,pids,aktion,start,count,...(url?{url}:{})};if(S.aPJ?.id===S.form.pjid){S.aPJ=S.projekte[i];rPJHdr();rPJT(S.aPT);}}showT('Aktualisiert ✓');}else{S.projekte.push({id:uid(),name,pids,aktion,start,count,cids:[],status:'planned',url:url||null});showT(\`"\${name}" erstellt ✓\`);}rProjekte();uBdg();closeM();saveAppData('projekte',S.projekte);};
     if(pf){const r=new FileReader();r.onload=e=>apply(e.target.result);r.readAsDataURL(pf);}else apply(null);return;
   }
   if(type==='addK'||type==='editK'){
     const isE=type==='editK';const name=G('m-kn').value.trim();if(!name)return;const icon=G('m-ki').value.trim()||'📁';const ktype=G('m-kt').value;
-    if(isE){const i=S.kat.findIndex(k=>k.id===S.form.kid);if(i>=0)S.kat[i]={...S.kat[i],name,icon,type:ktype};showT('Aktualisiert ✓');}else{S.kat.push({id:uid(),name,icon,type:ktype});showT(\`"\${name}" erstellt ✓\`);}rKat();closeM();return;
+    if(isE){const i=S.kat.findIndex(k=>k.id===S.form.kid);if(i>=0)S.kat[i]={...S.kat[i],name,icon,type:ktype};showT('Aktualisiert ✓');}else{S.kat.push({id:uid(),name,icon,type:ktype});showT(\`"\${name}" erstellt ✓\`);}rKat();closeM();saveAppData('kat',S.kat);return;
   }
   if(type==='invite'){
     const name=G('m-in').value.trim();if(!name){showT('Name erforderlich');return;}const email=G('m-ie').value.trim();if(!email||!email.includes('@')){showT('Gültige E-Mail erforderlich');return;}
@@ -2108,6 +2120,17 @@ window.rCreators = rCreators;
 window.rCInvite = rCInvite;
 window.openC = openC;
 window.go = go;
+window.rProdukte = rProdukte;
+window.rProjekte = rProjekte;
+window.rKat = rKat;
+window.rCT = rCT;
+window.rCHdr = rCHdr;
+
+function saveAppData(key,value){
+  const token=localStorage.getItem('token')||'';
+  fetch('/api/app-data',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({key,value})}).catch(()=>{});
+}
 
 go('dashboard');rFP();
 // Mobile sidebar toggle
@@ -2226,8 +2249,64 @@ export default function DashboardPage() {
         if (w.rDash) try { w.rDash() } catch(e) {}
         if (w.rCreators) try { w.rCreators() } catch(e) {}
         if (w.rCInvite) try { w.rCInvite() } catch(e) {}
+
+        // Load folders for each creator
+        newCreators.forEach((c: any) => {
+          fetch('/api/folders?creatorId=' + String(c.id), {
+            headers: { 'Authorization': 'Bearer ' + token }
+          })
+            .then(r => r.json())
+            .then((folders: any[]) => {
+              if (!Array.isArray(folders)) return
+              const cr = w.S.creators.find((x: any) => String(x.id) === String(c.id))
+              if (!cr) return
+              folders.forEach((f: any) => {
+                const tab = f.tab || 'bilder'
+                if (!cr.flds[tab]) cr.flds[tab] = []
+                if (!cr.flds[tab].find((x: any) => String(x.id) === String(f.id))) {
+                  cr.flds[tab].push({
+                    id: f.id,
+                    name: f.name,
+                    batch: f.batch || '',
+                    date: f.date || new Date().toISOString().slice(0,10),
+                    deadline: f.deadline || '',
+                    prods: f.prods || [],
+                    tags: f.tags || [],
+                    files: []
+                  })
+                }
+              })
+              if (w.S.aC && String(w.S.aC.id) === String(c.id)) {
+                try { w.rCT(w.S.aCT) } catch(e) {}
+                try { w.rCHdr() } catch(e) {}
+              }
+            })
+            .catch(() => {})
+        })
       })
       .catch((e: any) => console.warn('[Dashboard] Creator sync failed:', e.message))
+
+    // Load app data (produkte, projekte, kat)
+    fetch('/api/app-data', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => r.json())
+      .then((appData: any) => {
+        if (!appData || !w.S) return
+        if (Array.isArray(appData.produkte) && appData.produkte.length > 0) {
+          w.S.produkte = appData.produkte
+        }
+        if (Array.isArray(appData.projekte) && appData.projekte.length > 0) {
+          w.S.projekte = appData.projekte
+        }
+        if (Array.isArray(appData.kat) && appData.kat.length > 0) {
+          w.S.kat = appData.kat
+        }
+        try { w.rDash() } catch(e) {}
+        try { w.rProdukte && w.rProdukte() } catch(e) {}
+        try { w.rProjekte && w.rProjekte() } catch(e) {}
+        try { w.rKat && w.rKat() } catch(e) {}
+        console.log('[Dashboard] App data loaded')
+      })
+      .catch(() => {})
 
     return () => { try { document.head.removeChild(st) } catch(e){} }
   }, [])
