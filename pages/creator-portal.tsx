@@ -288,7 +288,7 @@ export default function CreatorPortal() {
                 <span style={{ width: 15, textAlign: 'center' }}>{n.icon}</span>{n.label}
               </div>
             ))}
-            <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid #e8e8ec', marginTop: 20 }}>
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e8e8ec' }}>
               <div style={{ fontSize: 10, color: '#aaa', padding: '0 6px' }}>
                 📁 {uploads.length} Dateien hochgeladen
               </div>
