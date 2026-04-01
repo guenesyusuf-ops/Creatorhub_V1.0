@@ -1499,19 +1499,39 @@ function renderPortalPage(page){
         if(!fldName){showT('Bitte Ordner-Namen eingeben');return;}
         tab=fldTab;
         const newFld={id:uid(),name:fldName,batch:fldName,date:new Date().toISOString().slice(0,10),deadline:'',prods:[],tags:[],files:[]};
+        const fldToken=localStorage.getItem('creator_token')||localStorage.getItem('token')||'';
+        fetch('/api/folders',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+fldToken},
+          body:JSON.stringify({creator_id:String(c.id),tab,name:fldName,batch:fldName,date:new Date().toISOString().slice(0,10)})})
+          .then(r=>r.json()).then(d=>{if(d.id)newFld.id=d.id;}).catch(()=>{});
         c.flds[tab].push(newFld);fld=newFld;showT(\`Ordner "\${fldName}" erstellt ✓\`);
       } else {
         if(!sel){showT('Bitte Ordner wählen');return;}
-        const [fldId,t]=sel.split(':');tab=t;fld=c.flds[tab]?.find(f=>f.id===+fldId);if(!fld){showT('Ordner nicht gefunden');return;}
+        const [fldId,t]=sel.split(':');tab=t;fld=c.flds[tab]?.find(f=>String(f.id)===String(fldId));if(!fld){showT('Ordner nicht gefunden');return;}
       }
-      const nf={id:uid(),name,type:file?(file.type.startsWith('image/')?'image':'video'):'file',url:null,size:file?(file.size/1024/1024).toFixed(1)+' MB':'',uploadedAt:null,comments:[]};
-      if(file){
-        G('portal-prog').style.display='block';G('portal-upload-btn').disabled=true;
-        const r=new FileReader();r.onload=e=>{nf.url=e.target.result;};r.readAsDataURL(file);
-        let p=0;const iv=setInterval(()=>{p+=10;G('portal-pb').style.width=Math.min(p,100)+'%';G('portal-ps').textContent=\`Upload: \${Math.min(p,100)}%\`;
-          if(p>=100){clearInterval(iv);G('portal-pb').style.background='var(--grn)';G('portal-ps').textContent='✓ Hochgeladen!';
-            setTimeout(()=>{fld.files.push(nf);showT(\`"\${name}" hochgeladen ✓\`);renderPortalPage('upload');},500);}},60);
-      } else {fld.files.push(nf);showT(\`"\${name}" hinzugefügt ✓\`);}
+      // Real upload to R2 + Supabase
+      const token=localStorage.getItem('creator_token')||localStorage.getItem('token')||'';
+      if(!file){showT('Bitte Datei auswählen');return;}
+      G('portal-prog').style.display='block';
+      G('portal-ps').textContent='Wird hochgeladen...';
+      G('portal-upload-btn').disabled=true;
+      const fd=new FormData();
+      fd.append('file',file);
+      fd.append('creatorId',String(c.id));
+      fd.append('tab',tab);
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','/api/upload');
+      xhr.setRequestHeader('Authorization','Bearer '+token);
+      xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);G('portal-pb').style.width=p+'%';G('portal-ps').textContent='Upload: '+p+'%';}};
+      xhr.onload=()=>{
+        const d=JSON.parse(xhr.responseText);
+        if(xhr.status!==200){showT('Fehler: '+(d.error||'Upload fehlgeschlagen'));G('portal-upload-btn').disabled=false;return;}
+        G('portal-pb').style.background='var(--grn)';G('portal-ps').textContent='✓ Gespeichert!';
+        const ft=file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':'file';
+        const nf={id:d.upload?.id||uid(),name,type:ft,url:d.upload?.file_url||d.url,size:(file.size/1024/1024).toFixed(1)+' MB',uploadedAt:null,comments:[],r2Key:d.upload?.r2_key||null};
+        setTimeout(()=>{fld.files.push(nf);showT('"'+name+'" hochgeladen ✓');renderPortalPage('upload');G('portal-upload-btn').disabled=false;},500);
+      };
+      xhr.onerror=()=>{showT('Netzwerkfehler');G('portal-upload-btn').disabled=false;};
+      xhr.send(fd);
     });
   }
   else if(page==='tips'||page==='briefings'||page==='skripte'||page==='videos'){
@@ -2214,7 +2234,29 @@ export async function getServerSideProps() {
   return { props: {} }
 }
 
-export default function CreatorPortalPage() {
+class ErrorBoundary extends (require('react') as any).Component {
+  state = { hasError: false, error: '' }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error: error?.message || String(error) }
+  }
+  render() {
+    if ((this as any).state.hasError) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'system-ui', textAlign: 'center' }}>
+          <h2>Portal konnte nicht geladen werden</h2>
+          <p style={{ color: '#888', marginTop: 8 }}>{(this as any).state.error}</p>
+          <button onClick={() => window.location.reload()}
+            style={{ marginTop: 16, padding: '10px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            Neu laden
+          </button>
+        </div>
+      )
+    }
+    return (this as any).props.children
+  }
+}
+
+function CreatorPortalInner() {
   const router = useRouter()
   const ref = useRef<HTMLDivElement>(null)
   const styleRef = useRef<HTMLStyleElement | null>(null)
@@ -2495,4 +2537,32 @@ export default function CreatorPortalPage() {
       />
     </>
   )
+}
+function CreatorPortalInner() {
+  return <ErrorBoundary><CreatorPortalInner /></ErrorBoundary>
+}
+
+class ErrorBoundary extends (require('react') as any).Component<{children: any}, {hasError: boolean, error: string}> {
+  constructor(props: any) { super(props); this.state = { hasError: false, error: '' } }
+  static getDerivedStateFromError(error: any) { return { hasError: true, error: error?.message || String(error) } }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'system-ui', textAlign: 'center', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Portal konnte nicht geladen werden</h2>
+          <p style={{ color: '#888', marginBottom: 24, fontSize: 14 }}>{this.state.error}</p>
+          <button onClick={() => window.location.reload()}
+            style={{ padding: '12px 24px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
+            Seite neu laden
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+export default function CreatorPortalPage() {
+  return <ErrorBoundary><CreatorPortalInner /></ErrorBoundary>
 }
