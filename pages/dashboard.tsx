@@ -1322,10 +1322,10 @@ function rTeam(){
 
 // ── CREATOR EINLADEN ──────────────────────────────────────────────────────
 function rCInvite(){
-  const notInvited=S.creators.filter(c=>!c.invited);
+  const notInvited=S.creators.filter(c=>!c.invited||!c.invite_code);
   G('ci-sel').innerHTML='<option value="">– Creator wählen –</option>'+notInvited.map(c=>'<option value="'+c.id+'">'+c.name+(c.email?' ('+c.email+')':'')+'</option>').join('');
   G('ci-sel').onchange=function(){
-    const cid=+this.value;const c=S.creators.find(x=>x.id===cid);
+    const cid=this.value;const c=S.creators.find(x=>String(x.id)===String(cid));
     if(c){const wrap=G('ci-email-wrap'),prev=G('ci-preview');
       if(c.email){wrap.style.display='none';G('ci-email').value=c.email;}
       else{wrap.style.display='block';G('ci-email').value='';}
@@ -1877,9 +1877,9 @@ G('fp-cs').addEventListener('input',e=>rFpC(e.target.value));
 G('close-portal').addEventListener('click',()=>G('creator-portal').classList.remove('open'));
 G('open-portal-preview').addEventListener('click',()=>openPortal(S.creators[0].id));
 G('ci-send').addEventListener('click',async ()=>{
-  const cid=+G('ci-sel').value;
+  const cid=G('ci-sel').value;
   if(!cid){showT('Bitte einen Creator auswählen');return;}
-  const c=S.creators.find(x=>x.id===cid);
+  const c=S.creators.find(x=>String(x.id)===String(cid));
   if(!c){showT('Creator nicht gefunden');return;}
   const email=c.email||G('ci-email').value.trim();
   if(!email||!email.includes('@')){showT('Gültige E-Mail erforderlich');return;}
@@ -2207,38 +2207,39 @@ export default function DashboardPage() {
             String(c.id) === String(rc.id) || c.name === rc.name
           )
           return {
-            // Base structure
+            // Supabase data is primary source of truth
             id: rc.id,
             name: rc.name,
             ini: rc.initials || rc.name.slice(0,2).toUpperCase(),
             color: rc.color_from || existing?.color || '#6366f1',
-            email: rc.email || existing?.email || '',
+            email: rc.email || '',
             status: rc.status || 'ausstehend',
             last_login: rc.last_login,
             lastLogin: rc.last_login,
             invite_code: rc.invite_code,
             invited: !!rc.invite_code,
             invitedAt: rc.invited_at,
-            // Preserve local data if exists
-            tags: existing?.tags || [],
+            // Profile fields — Supabase first, existing local as fallback
+            tags: (rc.tags && rc.tags.length > 0) ? rc.tags : (existing?.tags || []),
+            age: rc.age || existing?.age || 0,
+            gender: rc.gender || existing?.gender || 'female',
+            country: rc.country || existing?.country || 'DE',
+            desc: rc.description || existing?.desc || '',
+            photo: rc.photo || existing?.photo || null,
+            instagram: rc.instagram || existing?.instagram || '',
+            verguetung: rc.verguetung || existing?.verguetung || 'provision',
+            provision: rc.provision || existing?.provision || '',
+            fixbetrag: rc.fixbetrag || existing?.fixbetrag || '',
+            notizen: rc.notizen || existing?.notizen || '',
+            notizenCreator: rc.notizen_creator || existing?.notizenCreator || '',
+            kids: rc.kids != null ? rc.kids : (existing?.kids || false),
+            kidsAges: (rc.kids_ages && rc.kids_ages.length > 0) ? rc.kids_ages : (existing?.kidsAges || []),
+            kidsOnVid: rc.kids_on_vid != null ? rc.kids_on_vid : (existing?.kidsOnVid || false),
+            // Preserve local-only data
             flds: existing?.flds || { bilder: [], videos: [], roh: [], auswertung: [] },
-            notizen: existing?.notizen || '',
-            notizenCreator: existing?.notizenCreator || '',
-            age: existing?.age || 0,
-            gender: existing?.gender || 'female',
-            country: existing?.country || 'DE',
-            desc: existing?.desc || '',
-            photo: existing?.photo || null,
-            up: existing?.up || new Date(),
-            kids: existing?.kids || false,
-            kidsAges: existing?.kidsAges || [],
-            kidsOnVid: existing?.kidsOnVid || false,
-            verguetung: existing?.verguetung || 'provision',
-            provision: existing?.provision || '',
-            fixbetrag: existing?.fixbetrag || '',
             vertrag: existing?.vertrag || null,
             vertragsname: existing?.vertragsname || '',
-            instagram: existing?.instagram || '',
+            up: existing?.up || new Date(),
           }
         })
 
