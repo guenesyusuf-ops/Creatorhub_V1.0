@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, Component } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 
@@ -2226,7 +2226,7 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-class ErrorBoundary extends (require('react') as any).Component<{children: any}, {hasError: boolean, error: string}> {
+class ErrorBoundary extends Component<{children: any}, {hasError: boolean, error: string}> {
   constructor(props: any) { super(props); this.state = { hasError: false, error: '' } }
   static getDerivedStateFromError(error: any) { return { hasError: true, error: error?.message || String(error) } }
   render() {
