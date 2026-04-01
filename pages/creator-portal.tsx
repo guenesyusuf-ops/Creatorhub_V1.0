@@ -3387,6 +3387,8 @@ function openChModal(item){
 
 // Expose key functions and state on window for React sync
 window.S = S;
+window.openPortal = openPortal;
+window.renderPortalPage = renderPortalPage;
 window.rDash = rDash;
 window.rCreators = rCreators;
 window.rCInvite = rCInvite;
