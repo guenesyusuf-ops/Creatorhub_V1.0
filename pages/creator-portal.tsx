@@ -2226,34 +2226,31 @@ function ErrorScreen({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-
-type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
-
-// Prevent static generation — this page needs client-side auth
-export async function getServerSideProps() {
-  return { props: {} }
-}
-
-class ErrorBoundary extends (require('react') as any).Component {
-  state = { hasError: false, error: '' }
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, error: error?.message || String(error) }
-  }
+class ErrorBoundary extends (require('react') as any).Component<{children: any}, {hasError: boolean, error: string}> {
+  constructor(props: any) { super(props); this.state = { hasError: false, error: '' } }
+  static getDerivedStateFromError(error: any) { return { hasError: true, error: error?.message || String(error) } }
   render() {
-    if ((this as any).state.hasError) {
+    if (this.state.hasError) {
       return (
-        <div style={{ padding: 32, fontFamily: 'system-ui', textAlign: 'center' }}>
-          <h2>Portal konnte nicht geladen werden</h2>
-          <p style={{ color: '#888', marginTop: 8 }}>{(this as any).state.error}</p>
+        <div style={{ padding: 32, fontFamily: 'system-ui', textAlign: 'center', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Portal konnte nicht geladen werden</h2>
+          <p style={{ color: '#888', marginBottom: 24, fontSize: 14 }}>{this.state.error}</p>
           <button onClick={() => window.location.reload()}
-            style={{ marginTop: 16, padding: '10px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-            Neu laden
+            style={{ padding: '12px 24px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
+            Seite neu laden
           </button>
         </div>
       )
     }
-    return (this as any).props.children
+    return this.props.children
   }
+}
+
+type AuthState = 'checking' | 'auth_ready' | 'portal_ready' | 'error' | 'portal_error'
+
+export async function getServerSideProps() {
+  return { props: {} }
 }
 
 function CreatorPortalInner() {
@@ -2267,21 +2264,14 @@ function CreatorPortalInner() {
 
   // ── Step 1: Auth ─────────────────────────────────────────────────────────
   useEffect(() => {
-    // Run once on mount — poll for router.isReady
-    // Using [] deps + internal check is more reliable than [router.isReady]
-    // because router.isReady can miss the transition in some Next.js versions
     function runAuth() {
       if (authInitialized.current) return
       authInitialized.current = true
-
-      // Read code directly from window.location as fallback
       const urlParams = new URLSearchParams(window.location.search)
       const urlCode = urlParams.get('code') || (router.query.code as string) || ''
       const storedToken = localStorage.getItem('creator_token')
       const storedCreator = localStorage.getItem('creator')
-
       console.log('[CreatorPortal] Auth init | code:', urlCode || 'none', '| hasToken:', !!storedToken)
-
       if (urlCode) {
         verifyCode(urlCode)
       } else if (storedToken && storedCreator) {
@@ -2299,28 +2289,11 @@ function CreatorPortalInner() {
         setAuthState('error')
       }
     }
-
     if (router.isReady) {
       runAuth()
     } else {
-      // Fallback: wait for router via timeout
-      // This handles edge cases where isReady event is missed
       const timeout = setTimeout(runAuth, 500)
-      const cleanup = router.events?.on('routeChangeComplete', runAuth)
-      return () => {
-        clearTimeout(timeout)
-        router.events?.off('routeChangeComplete', runAuth)
-      }
-    }
-  }, [])
-
-  // Cleanup styleEl only on component unmount — not on every state change
-  useEffect(() => {
-    return () => {
-      if (styleRef.current) {
-        try { document.head.removeChild(styleRef.current) } catch {}
-        styleRef.current = null
-      }
+      return () => clearTimeout(timeout)
     }
   }, [])
 
@@ -2332,18 +2305,13 @@ function CreatorPortalInner() {
         body: JSON.stringify({ code: code.trim().toUpperCase() })
       })
       const data = await res.json()
-      if (!res.ok || !data.creator) {
-        setAuthState('error')
-        return
-      }
+      if (!res.ok || !data.creator) { setAuthState('error'); return }
       localStorage.setItem('creator_token', data.token)
       localStorage.setItem('creator', JSON.stringify(data.creator))
       setCreatorData(data.creator)
       setAuthState('auth_ready')
       router.replace('/creator-portal', undefined, { shallow: true })
-    } catch {
-      setAuthState('error')
-    }
+    } catch { setAuthState('error') }
   }
 
   function clearSession() {
@@ -2360,23 +2328,12 @@ function CreatorPortalInner() {
     jsInitialized.current = true
     console.log('[CreatorPortal] Init effect running, creatorData:', creatorData?.name)
 
-    // Inject full HTML — same as admin dashboard
     ref.current.innerHTML = HTML
-    console.log('[CreatorPortal] HTML injected, ref children:', ref.current.children.length)
-
-    // Inject CSS
     const styleEl = document.createElement('style')
     styleEl.textContent = CSS
     document.head.appendChild(styleEl)
     styleRef.current = styleEl
 
-    // Run JS and return S + openPortal from the function scope
-    // Using return {} so we can call openPortal without window.* hacks
-    // PROVEN FIX (tested in Node.js):
-    // 62 top-level G() calls throw before return {} is reached
-    // because G() returns null for missing admin DOM elements
-    // Solution: prepend a safe G() that returns a dummy proxy for null elements
-    // and remove the conflicting 'const G=' from JS
     const DUMMY_G = [
       'var __dummy=new Proxy({},{',
       '  get:function(t,k){',
@@ -2391,10 +2348,9 @@ function CreatorPortalInner() {
       'var G=function(id){var el=document.getElementById(id);return el!==null?el:__dummy;};',
     ].join('\n')
 
-    // Remove 'const G=...' from JS to avoid re-declaration conflict
     const patchedJS = JS.replace('const G=id=>document.getElementById(id);', '/* G defined above */')
-
-    const wrappedJS = DUMMY_G + patchedJS + '\n;return {S:S, openPortal:openPortal, renderPortalPage:renderPortalPage};'
+    const EXPOSE_GLOBALS = '\n;return {S:S, openPortal:openPortal, renderPortalPage:renderPortalPage};'
+    const wrappedJS = DUMMY_G + patchedJS + EXPOSE_GLOBALS
 
     let appContext: any = null
     try {
@@ -2416,7 +2372,6 @@ function CreatorPortalInner() {
     const { S, openPortal } = appContext
     const cid = creatorData.id
 
-    // Add creator to S.creators if not present
     if (!S.creators.find((c: any) => String(c.id) === String(cid))) {
       S.creators.push({
         id: cid,
@@ -2431,7 +2386,6 @@ function CreatorPortalInner() {
       })
     }
 
-    // Call openPortal — exactly like admin does
     try {
       openPortal(cid)
       console.log('[CreatorPortal] openPortal() called')
@@ -2439,7 +2393,6 @@ function CreatorPortalInner() {
       console.error('[CreatorPortal] openPortal threw:', e instanceof Error ? (e as Error).message : String(e))
     }
 
-    // Verify portal got .open class
     const portalEl = document.getElementById('creator-portal')
     if (!portalEl) {
       console.error('[CreatorPortal] portal element missing')
@@ -2454,33 +2407,23 @@ function CreatorPortalInner() {
     }
     console.log('[CreatorPortal] portal has .open:', portalEl.classList.contains('open'))
 
-    // SET PORTAL_READY IMMEDIATELY — before any cosmetic DOM operations
-    // This makes the container visible right away
     setAuthState('portal_ready')
 
-    // Remove loader and unhide container after portal is ready
     setTimeout(() => {
-      // Fix 1: Remove loading overlay
       const loader = document.querySelector('[style*="z-index:99999"], [style*="z-index: 99999"]')
       if (loader) loader.remove()
-
-      // Fix 2: Make portal explicitly visible
       const portal = document.getElementById('creator-portal')
       if (portal) {
         portal.style.opacity = '1'
         portal.style.visibility = 'visible'
         portal.style.pointerEvents = 'auto'
       }
-
-      // Fix 3: Unhide any visibility:hidden containers
       document.querySelectorAll('[style*="visibility:hidden"]').forEach((el: any) => {
         el.style.visibility = 'visible'
       })
       document.querySelectorAll('[style*="pointer-events:none"]').forEach((el: any) => {
         el.style.pointerEvents = 'auto'
       })
-
-      // Cosmetic: hide admin UI elements
       const adminSb = document.getElementById('admin-sb')
       if (adminSb) adminSb.style.display = 'none'
       const adminMain = document.querySelector('.main') as HTMLElement | null
@@ -2499,9 +2442,22 @@ function CreatorPortalInner() {
       if (closeBtn) closeBtn.style.display = 'none'
     }, 0)
 
-    // Note: no cleanup here — styleEl must persist for portal rendering
-    // It will be cleaned up on component unmount via separate effect below
+    return () => {
+      if (styleRef.current) {
+        try { document.head.removeChild(styleRef.current) } catch {}
+        styleRef.current = null
+      }
+    }
   }, [authState, creatorData])
+
+  useEffect(() => {
+    return () => {
+      if (styleRef.current) {
+        try { document.head.removeChild(styleRef.current) } catch {}
+        styleRef.current = null
+      }
+    }
+  }, [])
 
   return (
     <>
@@ -2537,30 +2493,6 @@ function CreatorPortalInner() {
       />
     </>
   )
-}
-function CreatorPortalInner() {
-  return <ErrorBoundary><CreatorPortalInner /></ErrorBoundary>
-}
-
-class ErrorBoundary extends (require('react') as any).Component<{children: any}, {hasError: boolean, error: string}> {
-  constructor(props: any) { super(props); this.state = { hasError: false, error: '' } }
-  static getDerivedStateFromError(error: any) { return { hasError: true, error: error?.message || String(error) } }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: 32, fontFamily: 'system-ui', textAlign: 'center', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Portal konnte nicht geladen werden</h2>
-          <p style={{ color: '#888', marginBottom: 24, fontSize: 14 }}>{this.state.error}</p>
-          <button onClick={() => window.location.reload()}
-            style={{ padding: '12px 24px', background: '#111', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}>
-            Seite neu laden
-          </button>
-        </div>
-      )
-    }
-    return this.props.children
-  }
 }
 
 export default function CreatorPortalPage() {
