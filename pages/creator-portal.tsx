@@ -1394,8 +1394,9 @@ function rCInvite(){
 // ── PORTAL ────────────────────────────────────────────────────────────────
 let _portalCreator=null;
 function openPortal(cid){
-  const c=S.creators.find(x=>x.id===cid)||S.creators[0];
+  const c=S.creators.find(x=>String(x.id)===String(cid))||S.creators[0];
   _portalCreator=c;
+  S.aC=c;
   G('creator-portal').querySelector('.portal-topbar div:nth-child(3) div').innerHTML=\`Angemeldet als: <strong>\${c.name}</strong>\`;
   G('creator-portal').classList.add('open');
   renderPortalPage('home');
