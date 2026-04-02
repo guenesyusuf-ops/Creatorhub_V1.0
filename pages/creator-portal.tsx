@@ -105,7 +105,7 @@ export default function CreatorPortal() {
     const token = localStorage.getItem('creator_token') || ''
     setUploading(true); setUploadPct(0)
 
-    // Link-only upload
+    // ── Link-only Upload ──────────────────────────────────────────────────
     if (uLink.trim() && !uFile) {
       try {
         const fd = new FormData()
@@ -131,37 +131,91 @@ export default function CreatorPortal() {
       return
     }
 
-    // File upload (with optional link)
-    const fd = new FormData()
-    if (uFile) fd.append('file', uFile)
-    fd.append('creatorId', String(creator.id))
-    fd.append('tab', uCategory)
-    fd.append('linkName', uLabel.trim())  // → wird als file_name gespeichert
-    if (uBatch.trim()) fd.append('batch', uBatch.trim())
-    if (uProduct.trim()) fd.append('product', uProduct.trim())
-    if (uLink.trim()) fd.append('linkUrl', uLink.trim())
+    // ── Datei Upload via Presigned URL (direkt zu R2) ─────────────────────
+    try {
+      // Schritt 1: Presigned URL von der API holen
+      setUploadPct(5)
+      const urlRes = await fetch('/api/upload-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fileName: uFile!.name,
+          fileType: uFile!.type,
+          creatorId: String(creator.id),
+          tab: uCategory
+        })
+      })
 
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', '/api/upload')
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) setUploadPct(Math.round(e.loaded / e.total * 100))
-    }
-    xhr.onload = async () => {
-      const data = JSON.parse(xhr.responseText)
-      if (xhr.status !== 200) {
-        showToast('Fehler: ' + (data.error || 'Upload fehlgeschlagen'))
+      if (!urlRes.ok) {
+        const err = await urlRes.json()
+        showToast('Fehler beim Vorbereiten: ' + (err.error || 'Unbekannt'))
         setUploading(false)
         return
       }
+
+      const { signedUrl, key, publicUrl } = await urlRes.json()
+      setUploadPct(10)
+
+      // Schritt 2: Datei direkt zu R2 hochladen via XHR (für Progress)
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', signedUrl)
+        xhr.setRequestHeader('Content-Type', uFile!.type)
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            // Progress von 10% bis 90%
+            setUploadPct(10 + Math.round(e.loaded / e.total * 80))
+          }
+        }
+        xhr.onload = () => {
+          if (xhr.status === 200 || xhr.status === 204) resolve()
+          else reject(new Error('R2 Upload fehlgeschlagen: ' + xhr.status))
+        }
+        xhr.onerror = () => reject(new Error('Netzwerkfehler'))
+        xhr.send(uFile)
+      })
+
+      setUploadPct(90)
+
+      // Schritt 3: Supabase-Eintrag via API erstellen
+      const fd = new FormData()
+      fd.append('creatorId', String(creator.id))
+      fd.append('tab', uCategory)
+      fd.append('linkName', uLabel.trim())
+      fd.append('r2Key', key)
+      fd.append('publicUrl', publicUrl)
+      fd.append('fileSize', String(uFile!.size))
+      fd.append('mimeType', uFile!.type)
+      if (uBatch.trim()) fd.append('batch', uBatch.trim())
+      if (uProduct.trim()) fd.append('product', uProduct.trim())
+      if (uLink.trim()) fd.append('linkUrl', uLink.trim())
+
+      const saveRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd
+      })
+
+      const saveData = await saveRes.json()
+      if (!saveRes.ok) {
+        showToast('Datei hochgeladen aber Fehler beim Speichern: ' + (saveData.error || 'Unbekannt'))
+        setUploading(false)
+        return
+      }
+
       setUploadPct(100)
       showToast(`"${uLabel}" erfolgreich hochgeladen ✓`)
       resetForm()
       await loadUploads(creator.id, token)
-      setUploading(false)
+
+    } catch (err: any) {
+      showToast('Fehler: ' + (err.message || 'Unbekannt'))
     }
-    xhr.onerror = () => { showToast('Netzwerkfehler'); setUploading(false) }
-    xhr.send(fd)
+
+    setUploading(false)
   }
 
   function resetForm() {
