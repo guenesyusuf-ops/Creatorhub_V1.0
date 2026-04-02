@@ -1086,7 +1086,7 @@ el.querySelectorAll('[data-dl]').forEach(btn=>btn.addEventListener('click',async
       G('bulk-count').textContent=S.bulkSel.length+' ausgewählt';
       rFiles(fld);return;
     }
-    openLB(+t.dataset.lb,+t.dataset.lbFld);
+    openLB(t.dataset.lb,t.dataset.lbFld);
   }));
   el.querySelectorAll('[data-df]').forEach(btn=>btn.addEventListener('click',()=>delFile(btn.dataset.df,btn.dataset.dfl)));
   G('add-fi-btn')?.addEventListener('click',()=>openM('upload'));
