@@ -1001,7 +1001,7 @@ function rCT(tab){
   html+=\`<div class="add-fcard" id="ct-add-fc"><div style="font-size:16px">📁</div><span style="font-size:10px;font-weight:500">Ordner anlegen</span></div></div>\`;
   G('c-tc').innerHTML=html;
   G('ct-add-fc')?.addEventListener('click',()=>openM('addFld',tab));
-  G('c-tc').querySelectorAll('[data-fld]').forEach(card=>card.addEventListener('click',e=>{if(!e.target.closest('button'))openFld(+card.dataset.fld,card.dataset.tab);}));
+  G('c-tc').querySelectorAll('[data-fld]').forEach(card=>card.addEventListener('click',e=>{if(!e.target.closest('button'))openFld(card.dataset.fld,card.dataset.tab);}));
   G('c-tc').querySelectorAll('[data-fld-dot]').forEach(btn=>btn.addEventListener('click',e=>{
     e.stopPropagation();
     const fid=+btn.dataset.fldDot;const t2=btn.closest('[data-tab]')?.dataset.tab||S.aCT;
