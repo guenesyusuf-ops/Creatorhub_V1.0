@@ -181,17 +181,17 @@ export default function CreatorPortal() {
       setUploadPct(90)
 
       // Schritt 3: Supabase-Eintrag via API erstellen
+      // publicUrl als linkUrl übergeben – upload.ts speichert es als Link-Eintrag
       const fd = new FormData()
       fd.append('creatorId', String(creator.id))
       fd.append('tab', uCategory)
       fd.append('linkName', uLabel.trim())
+      fd.append('linkUrl', publicUrl)
       fd.append('r2Key', key)
-      fd.append('publicUrl', publicUrl)
       fd.append('fileSize', String(uFile!.size))
       fd.append('mimeType', uFile!.type)
       if (uBatch.trim()) fd.append('batch', uBatch.trim())
       if (uProduct.trim()) fd.append('product', uProduct.trim())
-      if (uLink.trim()) fd.append('linkUrl', uLink.trim())
 
       const saveRes = await fetch('/api/upload', {
         method: 'POST',
