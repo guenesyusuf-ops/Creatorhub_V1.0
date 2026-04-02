@@ -1,42 +1,34 @@
-// v1.8 – Creator Portal
+// v2.0 – Creator Portal (Neubau mit neuem Design + funktionierendem Upload)
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 
+type Tab = 'bilder' | 'videos' | 'roh' | 'auswertung'
 type NavPage = 'home' | 'upload' | 'tips' | 'briefings' | 'skripte' | 'lernvideos'
 
-interface UploadItem {
+interface Upload {
   id: string
-  name: string
-  batch: string | null
-  product: string | null
-  category: string
+  file_name: string
   file_url: string
-  file_name: string | null
-  file_size: number | null
+  file_type: string
   mime_type: string | null
+  file_size: number | null
+  tab: Tab
   created_at: string
+  seen_by_admin: boolean
+  r2_key: string | null
+  // extra meta stored in file_name prefix or separate fields
+  batch?: string
+  product?: string
+  label?: string
 }
 
-interface LinkItem {
-  id: string
-  title: string
-  url: string
-  created_at: string
-}
-
-interface DateItem {
-  id: string
-  month: string
-  links: LinkItem[]
-}
-
-const TABS = [
+const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'bilder', label: 'Bilder', icon: '🖼️' },
   { key: 'videos', label: 'Videos', icon: '🎬' },
   { key: 'roh', label: 'Rohmaterial', icon: '📹' },
   { key: 'auswertung', label: 'Auswertungen', icon: '📊' },
-] as const
+]
 
 export default function CreatorPortal() {
   const router = useRouter()
@@ -45,33 +37,39 @@ export default function CreatorPortal() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [creator, setCreator] = useState<any>(null)
-  const [dates, setDates] = useState<DateItem[]>([])
-  const [uploads, setUploads] = useState<UploadItem[]>([])
+  const [uploads, setUploads] = useState<Upload[]>([])
   const [page, setPage] = useState<NavPage>('home')
-  const [activeDate, setActiveDate] = useState<DateItem | null>(null)
-  const [newTitle, setNewTitle] = useState('')
-  const [newUrl, setNewUrl] = useState('')
-  const [adding, setAdding] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('bilder')
   const [toast, setToast] = useState('')
-  const [activeTab, setActiveTab] = useState<'bilder' | 'videos' | 'roh' | 'auswertung'>('bilder')
-  // Upload form
-  const [uploadFile, setUploadFile] = useState<File | null>(null)
-  const [uploadName, setUploadName] = useState('')
-  const [uploadBatch, setUploadBatch] = useState('')
-  const [uploadProduct, setUploadProduct] = useState('')
-  const [uploadCategory, setUploadCategory] = useState<'bilder' | 'videos' | 'roh' | 'auswertung'>('bilder')
+
+  // Upload form state
+  const [uCategory, setUCategory] = useState<Tab>('bilder')
+  const [uLabel, setULabel] = useState('')
+  const [uBatch, setUBatch] = useState('')
+  const [uProduct, setUProduct] = useState('')
+  const [uLink, setULink] = useState('')
+  const [uFile, setUFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadPct, setUploadPct] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Auto-login from URL
+  // Auto-login from URL code
   useEffect(() => {
     if (!router.isReady) return
     const urlCode = router.query.code as string
-    if (!urlCode) return
-    setCode(urlCode.toUpperCase())
+    if (!urlCode) {
+      // Check existing session
+      const saved = localStorage.getItem('creator_token')
+      const savedCreator = localStorage.getItem('creator')
+      if (saved && savedCreator) {
+        setCreator(JSON.parse(savedCreator))
+        loadUploads(JSON.parse(savedCreator).id, saved)
+        setView('portal')
+      }
+      return
+    }
     loginWithCode(urlCode.toUpperCase())
-  }, [router.isReady, router.query.code])
+  }, [router.isReady])
 
   async function loginWithCode(c: string) {
     setLoading(true); setError('')
@@ -82,40 +80,25 @@ export default function CreatorPortal() {
         body: JSON.stringify({ code: c })
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Ungültiger Code'); setLoading(false); return }
-      localStorage.setItem('token', data.token)
+      if (!res.ok) {
+        setError(data.error || 'Ungültiger Code')
+        setLoading(false)
+        return
+      }
+      localStorage.setItem('creator_token', data.token)
       localStorage.setItem('creator', JSON.stringify(data.creator))
       setCreator(data.creator)
-      await Promise.all([
-        loadDates(data.creator.id, data.token),
-        loadUploads(data.creator.id, data.token),
-      ])
+      await loadUploads(data.creator.id, data.token)
       setView('portal')
-    } catch { setError('Verbindungsfehler.') }
+    } catch {
+      setError('Verbindungsfehler. Bitte versuche es erneut.')
+    }
     setLoading(false)
-  }
-
-  async function handleLogin(e: any) {
-    e.preventDefault()
-    await loginWithCode(code)
-  }
-
-  async function loadDates(creatorId: string, token: string) {
-    try {
-      const res = await fetch(`/api/dates?creator_id=${creatorId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await res.json()
-      if (Array.isArray(data)) {
-        setDates(data)
-        if (data.length > 0) setActiveDate(data[0])
-      }
-    } catch {}
   }
 
   async function loadUploads(creatorId: string, token: string) {
     try {
-      const res = await fetch(`/api/uploads?creator_id=${creatorId}`, {
+      const res = await fetch(`/api/uploads?creatorId=${creatorId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -123,56 +106,76 @@ export default function CreatorPortal() {
     } catch {}
   }
 
-  async function addLink(e: any) {
-    e.preventDefault()
-    if (!activeDate) return
-    setAdding(true)
-    const token = localStorage.getItem('token')!
-    const res = await fetch('/api/links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ date_id: activeDate.id, creator_id: creator.id, title: newTitle, url: newUrl })
-    })
-    if (res.ok) {
-      setNewTitle(''); setNewUrl('')
-      showToast('✓ Link hinzugefügt!')
-      await loadDates(creator.id, token)
+  async function handleUpload() {
+    if (!uLabel.trim()) { showToast('Bitte eine Bezeichnung eingeben'); return }
+    if (!uFile && !uLink.trim()) { showToast('Bitte eine Datei auswählen oder einen Link eintragen'); return }
+
+    const token = localStorage.getItem('creator_token') || ''
+    setUploading(true); setUploadPct(0)
+
+    // Link-only upload
+    if (uLink.trim() && !uFile) {
+      try {
+        const fd = new FormData()
+        fd.append('linkUrl', uLink.trim())
+        fd.append('linkName', uLabel.trim())
+        fd.append('creatorId', String(creator.id))
+        fd.append('tab', uCategory)
+        if (uBatch.trim()) fd.append('batch', uBatch.trim())
+        if (uProduct.trim()) fd.append('product', uProduct.trim())
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd
+        })
+        const data = await res.json()
+        if (!res.ok) { showToast('Fehler: ' + (data.error || 'Unbekannt')); setUploading(false); return }
+        showToast(`"${uLabel}" wurde gespeichert ✓`)
+        resetForm()
+        await loadUploads(creator.id, token)
+      } catch { showToast('Fehler beim Speichern') }
+      setUploading(false)
+      return
     }
-    setAdding(false)
+
+    // File upload (with optional link)
+    const fd = new FormData()
+    if (uFile) fd.append('file', uFile)
+    fd.append('creatorId', String(creator.id))
+    fd.append('tab', uCategory)
+    if (uLabel.trim()) fd.append('linkName', uLabel.trim())
+    if (uBatch.trim()) fd.append('batch', uBatch.trim())
+    if (uProduct.trim()) fd.append('product', uProduct.trim())
+    if (uLink.trim()) fd.append('linkUrl', uLink.trim())
+
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', '/api/upload')
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) setUploadPct(Math.round(e.loaded / e.total * 100))
+    }
+    xhr.onload = async () => {
+      const data = JSON.parse(xhr.responseText)
+      if (xhr.status !== 200) {
+        showToast('Fehler: ' + (data.error || 'Upload fehlgeschlagen'))
+        setUploading(false)
+        return
+      }
+      setUploadPct(100)
+      showToast(`"${uLabel}" erfolgreich hochgeladen ✓`)
+      resetForm()
+      await loadUploads(creator.id, token)
+      setUploading(false)
+    }
+    xhr.onerror = () => { showToast('Netzwerkfehler'); setUploading(false) }
+    xhr.send(fd)
   }
 
-  async function handleUpload() {
-    if (!uploadFile || !uploadName.trim()) { showToast('Bitte Datei und Bezeichnung angeben'); return }
-    setUploading(true); setUploadProgress(0)
-    const token = localStorage.getItem('token')!
-    const formData = new FormData()
-    formData.append('file', uploadFile)
-    formData.append('creatorId', creator.id)
-    formData.append('tab', uploadCategory)
-    formData.append('name', uploadName)
-    formData.append('batch', uploadBatch)
-    formData.append('product', uploadProduct)
-
-    const iv = setInterval(() => setUploadProgress(p => p >= 85 ? p : p + 8), 150)
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      })
-      clearInterval(iv); setUploadProgress(100)
-      if (res.ok) {
-        showToast(`✓ "${uploadName}" erfolgreich hochgeladen!`)
-        setUploadFile(null); setUploadName(''); setUploadBatch(''); setUploadProduct('')
-        if (fileRef.current) fileRef.current.value = ''
-        setTimeout(() => setUploadProgress(0), 800)
-        await loadUploads(creator.id, token)
-      } else {
-        const err = await res.json()
-        showToast('Upload fehlgeschlagen: ' + (err.error || 'Fehler'))
-      }
-    } catch { clearInterval(iv); showToast('Upload fehlgeschlagen.') }
-    setUploading(false)
+  function resetForm() {
+    setULabel(''); setUBatch(''); setUProduct(''); setULink(''); setUFile(null)
+    if (fileRef.current) fileRef.current.value = ''
+    setUploadPct(0)
   }
 
   function showToast(msg: string) {
@@ -181,179 +184,200 @@ export default function CreatorPortal() {
   }
 
   function logout() {
-    localStorage.removeItem('token'); localStorage.removeItem('creator')
-    setView('login'); setCreator(null); setDates([]); setUploads([]); setCode('')
+    localStorage.removeItem('creator_token')
+    localStorage.removeItem('creator')
+    setView('login'); setCreator(null); setUploads([]); setCode('')
+    router.push('/creator')
   }
 
-  function formatSize(bytes: number | null) {
+  function fmtSize(bytes: number | null) {
     if (!bytes) return ''
-    if (bytes > 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-    return `${(bytes / 1024).toFixed(0)} KB`
+    return bytes > 1024 * 1024
+      ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+      : `${(bytes / 1024).toFixed(0)} KB`
   }
 
-  function formatDate(str: string) {
+  function fmtDate(str: string) {
     return new Date(str).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
   }
 
-  // ─── LOGIN ────────────────────────────────────────────────────────────────
+  const tabUploads = uploads.filter(u => u.tab === activeTab)
+  const totalUploads = uploads.length
+
+  // ── LOGIN ─────────────────────────────────────────────────────────────────
   if (view === 'login') return (
     <>
-      <Head><title>Creator Portal – CreatorHub</title></Head>
-      <style>{`*{box-sizing:border-box;margin:0;padding:0;}body{font-family:system-ui,sans-serif;background:#f4f5f7;}`}</style>
+      <Head><title>Creator Portal – Filapen</title></Head>
+      <style>{css}</style>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f5f7', padding: 24 }}>
-        <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 16, padding: 36, width: '100%', maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,.06)' }}>
-          <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 6 }}>🎨 Creator Portal</div>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 24 }}>Gib deinen Einladungscode ein um fortzufahren.</div>
-          <form onSubmit={handleLogin}>
+        <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 16, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,.06)' }}>
+          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6, color: '#111' }}>Creator Portal</div>
+          <div style={{ fontSize: 12, color: '#888', marginBottom: 28 }}>Gib deinen Einladungscode ein um fortzufahren.</div>
+          <form onSubmit={e => { e.preventDefault(); loginWithCode(code) }}>
             <div style={{ marginBottom: 14 }}>
-              <label style={st.fl}>Einladungscode</label>
-              <input style={{ ...st.fi, fontSize: 20, fontWeight: 700, letterSpacing: 5, textAlign: 'center', textTransform: 'uppercase' }}
-                value={code} onChange={e => setCode(e.target.value.toUpperCase())}
-                placeholder="XXXXXXXX" maxLength={8} required />
+              <label style={s.fl}>Einladungscode</label>
+              <input
+                style={{ ...s.fi, fontSize: 22, fontWeight: 700, letterSpacing: 6, textAlign: 'center', textTransform: 'uppercase' }}
+                value={code}
+                onChange={e => setCode(e.target.value.toUpperCase())}
+                placeholder="XXXXXXXX"
+                maxLength={8}
+                required
+              />
             </div>
-            {error && <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#dc2626', marginBottom: 14 }}>{error}</div>}
-            <button style={st.btnP} type="submit" disabled={loading}>
-              {loading ? 'Prüfe Code...' : 'Einloggen →'}
+            {error && <div style={s.errBox}>{error}</div>}
+            <button style={{ ...s.btnP, marginTop: 8 }} type="submit" disabled={loading}>
+              {loading ? 'Wird geprüft...' : 'Einloggen →'}
             </button>
           </form>
+          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: '#bbb' }}>Filapen GmbH · Creator Hub</div>
         </div>
       </div>
     </>
   )
 
-  // ─── PORTAL ───────────────────────────────────────────────────────────────
-  const tabUploads = uploads.filter(u => u.category === activeTab)
-
+  // ── PORTAL ────────────────────────────────────────────────────────────────
   return (
     <>
       <Head><title>{creator?.name} – Creator Portal</title></Head>
-      <style>{`
-        *{box-sizing:border-box;margin:0;padding:0;}
-        body{font-family:system-ui,sans-serif;background:#f4f5f7;color:#111;font-size:13px;}
-        .ni{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:#777;margin-bottom:1px;user-select:none;}
-        .ni:hover,.ni.on{background:#f0f0f3;color:#111;}
-        .ni.on{font-weight:500;}
-        .tab-btn{padding:7px 14px;border:none;background:none;cursor:pointer;font-size:12px;color:#777;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;}
-        .tab-btn.on{color:#111;font-weight:600;border-bottom-color:#111;}
-        .tab-btn:hover:not(.on){color:#444;}
-        .fcard{background:#fff;border:1px solid #e8e8ec;border-radius:9px;padding:12px;cursor:pointer;transition:border-color .15s;}
-        .fcard:hover{border-color:#bbb;}
-        .add-fcard{background:#fff;border:1.5px dashed #e8e8ec;border-radius:9px;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:#aaa;transition:border-color .15s;}
-        .add-fcard:hover{border-color:#aaa;color:#777;}
-        .dz{border:1.5px dashed #e8e8ec;border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:#f9f9fb;transition:border-color .15s;}
-        .dz:hover{border-color:#4f6ef7;background:#f0f2ff;}
-        .file-card{background:#fff;border:1px solid #e8e8ec;border-radius:9px;overflow:hidden;}
-        .file-thumb{height:120px;background:#f4f5f7;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;}
-        .file-thumb img,.file-thumb video{width:100%;height:100%;object-fit:cover;}
-        .tip-card{background:#fff;border:1px solid #e8e8ec;border-radius:10px;padding:18px;cursor:pointer;text-align:center;transition:border-color .15s;}
-        .tip-card:hover{border-color:#4f6ef7;}
-        .link-row{background:#fff;border:1px solid #e8e8ec;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;margin-bottom:7px;}
-        .prog-track{height:5px;background:#e8e8ec;border-radius:3px;overflow:hidden;}
-        .prog-fill{height:100%;background:#4f6ef7;border-radius:3px;transition:width .1s;}
-      `}</style>
+      <style>{css}</style>
 
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
         {/* TOPBAR */}
-        <div style={{ background: '#fff', borderBottom: '1px solid #e8e8ec', height: 52, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>🎨 Creator Portal</div>
-          <div style={{ fontSize: 11, color: '#888' }}>Ansicht als Creator</div>
+        <div style={{ background: '#fff', borderBottom: '1px solid #e8e8ec', height: 50, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>Creator Portal</div>
+          <div style={{ fontSize: 11, color: '#aaa' }}>Ansicht als Creator</div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{ fontSize: 11, color: '#888' }}>Angemeldet als: <strong>{creator?.name}</strong></div>
-            <button onClick={logout} style={{ background: 'none', border: '1px solid #e8e8ec', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer', color: '#666' }}>⏻ Abmelden</button>
+            <span style={{ fontSize: 11, color: '#888' }}>Angemeldet als: <strong style={{ color: '#111' }}>{creator?.name}</strong></span>
+            <button onClick={logout} style={s.btnGhost}>Abmelden</button>
           </div>
         </div>
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
           {/* SIDEBAR */}
-          <div style={{ width: 200, background: '#fff', borderRight: '1px solid #e8e8ec', flexShrink: 0, padding: '12px 8px', overflowY: 'auto' }}>
-            <div style={st.navLabel}>Mein Bereich</div>
+          <div style={{ width: 200, background: '#fff', borderRight: '1px solid #e8e8ec', flexShrink: 0, padding: '12px 7px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={s.navLabel}>Mein Bereich</div>
             {([
               { id: 'home', label: 'Mein Dashboard', icon: '⊞' },
               { id: 'upload', label: 'Inhalte hochladen', icon: '⬆' },
               { id: 'tips', label: 'Tipps & Tricks', icon: '💡' },
             ] as const).map(n => (
               <div key={n.id} className={`ni${page === n.id ? ' on' : ''}`} onClick={() => setPage(n.id)}>
-                <span style={{ width: 15, textAlign: 'center' }}>{n.icon}</span>{n.label}
+                <span style={{ width: 15, textAlign: 'center', fontSize: 12 }}>{n.icon}</span>{n.label}
               </div>
             ))}
-            <div style={{ ...st.navLabel, marginTop: 8 }}>Tipps &amp; Tricks</div>
+            <div style={{ ...s.navLabel, marginTop: 10 }}>Tipps & Tricks</div>
             {([
               { id: 'briefings', label: 'Briefings', icon: '📋' },
               { id: 'skripte', label: 'Skripte', icon: '📝' },
               { id: 'lernvideos', label: 'Lernvideos', icon: '🎬' },
             ] as const).map(n => (
               <div key={n.id} className={`ni${page === n.id ? ' on' : ''}`} style={{ paddingLeft: 20 }} onClick={() => setPage(n.id)}>
-                <span style={{ width: 15, textAlign: 'center' }}>{n.icon}</span>{n.label}
+                <span style={{ width: 15, textAlign: 'center', fontSize: 12 }}>{n.icon}</span>{n.label}
               </div>
             ))}
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e8e8ec' }}>
+            <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #e8e8ec' }}>
               <div style={{ fontSize: 10, color: '#aaa', padding: '0 6px' }}>
-                📁 {uploads.length} Dateien hochgeladen
+                {totalUploads} Datei{totalUploads !== 1 ? 'en' : ''} hochgeladen
               </div>
             </div>
           </div>
 
           {/* MAIN */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#f4f5f7' }}>
 
             {/* ── HOME ── */}
             {page === 'home' && (
               <>
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>Willkommen zurück 👋</div>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
+                  <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>Willkommen zurück 👋</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
                 </div>
 
                 {/* STATS */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 18 }}>
-                  <div style={st.sc}><div style={st.sl}>Meine Ordner</div><div style={st.sv}>0</div></div>
-                  <div style={st.sc}><div style={st.sl}>Dateien gesamt</div><div style={st.sv}>{uploads.length}</div></div>
-                  <div style={st.sc}><div style={st.sl}>Hochgeladen</div><div style={{ ...st.sv, color: '#16a34a' }}>{uploads.length}</div></div>
+                  <div style={s.sc}>
+                    <div style={s.sl}>Kategorien</div>
+                    <div style={s.sv}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div>
+                  </div>
+                  <div style={s.sc}>
+                    <div style={s.sl}>Dateien gesamt</div>
+                    <div style={s.sv}>{totalUploads}</div>
+                  </div>
+                  <div style={s.sc}>
+                    <div style={s.sl}>Hochgeladen</div>
+                    <div style={{ ...s.sv, color: '#16a34a' }}>{totalUploads}</div>
+                  </div>
                 </div>
 
                 {/* CATEGORY TABS */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', marginBottom: 14 }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', marginBottom: 14, background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
                   {TABS.map(t => (
-                    <button key={t.key} className={`tab-btn${activeTab === t.key ? ' on' : ''}`} onClick={() => setActiveTab(t.key)}>
+                    <button
+                      key={t.key}
+                      className={`tab-btn${activeTab === t.key ? ' on' : ''}`}
+                      onClick={() => setActiveTab(t.key)}
+                    >
                       {t.icon} {t.label}
+                      {uploads.filter(u => u.tab === t.key).length > 0 && (
+                        <span style={{ marginLeft: 4, fontSize: 10, background: '#f0f0f3', borderRadius: 8, padding: '1px 5px', color: '#666' }}>
+                          {uploads.filter(u => u.tab === t.key).length}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
 
                 {/* FILE GRID */}
                 {tabUploads.length === 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
-                    <div className="add-fcard" onClick={() => setPage('upload')}>
-                      <div style={{ fontSize: 16 }}>📁</div>
-                      <span style={{ fontSize: 10, fontWeight: 500 }}>Neuer Ordner</span>
+                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center', color: '#aaa' }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>
+                      {TABS.find(t => t.key === activeTab)?.icon}
                     </div>
+                    <div style={{ fontSize: 13, marginBottom: 12, color: '#888' }}>Noch keine Inhalte in dieser Kategorie</div>
+                    <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>
+                      + Hochladen
+                    </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                    {tabUploads.map(u => (
-                      <div key={u.id} className="file-card">
-                        <div className="file-thumb">
-                          {u.mime_type?.startsWith('image/') ? (
-                            <img src={u.file_url} alt={u.name} />
-                          ) : u.mime_type?.startsWith('video/') ? (
-                            <video src={u.file_url} />
-                          ) : (
-                            <span>📄</span>
-                          )}
+                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: '0 0 8px 8px', padding: 14 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+                      {tabUploads.map(u => (
+                        <div key={u.id} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden' }}>
+                          <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden' }}>
+                            {u.mime_type?.startsWith('image/') && u.file_url
+                              ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : u.file_type === 'video' ? '🎬'
+                              : u.file_type === 'link' ? '🔗'
+                              : '📄'}
+                          </div>
+                          <div style={{ padding: '8px 10px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
+                            <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
+                            {u.file_url && u.file_type !== 'link' && (
+                              <a href={u.file_url} target="_blank" rel="noreferrer"
+                                style={{ display: 'inline-block', marginTop: 5, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 7px' }}>
+                                Öffnen ↗
+                              </a>
+                            )}
+                            {u.file_type === 'link' && u.file_url && (
+                              <a href={u.file_url} target="_blank" rel="noreferrer"
+                                style={{ display: 'inline-block', marginTop: 5, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 7px' }}>
+                                Link öffnen ↗
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ padding: '8px 10px' }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</div>
-                          {u.batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {u.batch}</div>}
-                          {u.product && <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>🏷️ {u.product}</div>}
-                          <div style={{ fontSize: 10, color: '#aaa', marginTop: 3 }}>{formatDate(u.created_at)}{u.file_size ? ` · ${formatSize(u.file_size)}` : ''}</div>
-                        </div>
+                      ))}
+                      <div
+                        style={{ border: '1.5px dashed #e8e8ec', borderRadius: 9, minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: '#aaa' }}
+                        onClick={() => { setUCategory(activeTab); setPage('upload') }}
+                      >
+                        <div style={{ fontSize: 18 }}>+</div>
+                        <span style={{ fontSize: 10, fontWeight: 500 }}>Hochladen</span>
                       </div>
-                    ))}
-                    <div className="add-fcard" onClick={() => setPage('upload')}>
-                      <div style={{ fontSize: 16 }}>+</div>
-                      <span style={{ fontSize: 10, fontWeight: 500 }}>Hochladen</span>
                     </div>
                   </div>
                 )}
@@ -363,135 +387,128 @@ export default function CreatorPortal() {
             {/* ── UPLOAD ── */}
             {page === 'upload' && (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Inhalte hochladen</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 16 }}>Inhalte hochladen</div>
 
-                {/* Link eintragen */}
-                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>🔗 Video-Link eintragen</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Trage deinen Video-Link ein. Das Team wird automatisch benachrichtigt.</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 }}>
-                    {dates.map(d => {
-                      const label = new Date(d.month + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
-                      const active = activeDate?.id === d.id
-                      return (
-                        <button key={d.id} onClick={() => setActiveDate(d)}
-                          style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${active ? '#111' : '#e8e8ec'}`, background: active ? '#111' : '#fff', color: active ? '#fff' : '#888', fontSize: 12, cursor: 'pointer' }}>
-                          📅 {label}
-                        </button>
-                      )
-                    })}
+                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 4 }}>Datei hochladen</div>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>
+                    Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.
                   </div>
-                  {!activeDate ? (
-                    <div style={{ color: '#888', fontSize: 13 }}>Kein Datum vorhanden. Bitte den Admin kontaktieren.</div>
-                  ) : (
-                    <form onSubmit={addLink} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'end' }}>
-                      <div>
-                        <label style={st.fl}>Bezeichnung</label>
-                        <input style={st.fi} value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="z.B. Brand Video März" required />
-                      </div>
-                      <div>
-                        <label style={st.fl}>Link / URL</label>
-                        <input style={st.fi} value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://drive.google.com/..." required />
-                      </div>
-                      <button style={{ ...st.btnP, whiteSpace: 'nowrap' as const }} type="submit" disabled={adding}>{adding ? '...' : 'Eintragen'}</button>
-                    </form>
-                  )}
-                </div>
 
-                {/* Datei hochladen */}
-                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 18, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>📤 Datei hochladen</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Lade Bilder oder Videos direkt hoch. Sie bleiben dauerhaft in deinem Portal gespeichert.</div>
-
+                  {/* Row 1: Kategorie + Bezeichnung */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <div>
-                      <label style={st.fl}>Kategorie</label>
-                      <select style={st.fi} value={uploadCategory} onChange={e => setUploadCategory(e.target.value as any)}>
-                        {TABS.map(t => <option key={t.key} value={t.key}>{t.icon} {t.label}</option>)}
+                      <label style={s.fl}>Kategorie</label>
+                      <select style={s.fi} value={uCategory} onChange={e => setUCategory(e.target.value as Tab)}>
+                        <option value="bilder">🖼️ Bilder</option>
+                        <option value="videos">🎬 Videos</option>
+                        <option value="roh">📹 Rohmaterial</option>
+                        <option value="auswertung">📊 Auswertungen</option>
                       </select>
                     </div>
                     <div>
-                      <label style={st.fl}>Bezeichnung *</label>
-                      <input style={st.fi} value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="z.B. Lookbook Shot 01" />
-                    </div>
-                    <div>
-                      <label style={st.fl}>Batch (z.B. 01.04.26 / Osteraktion)</label>
-                      <input style={st.fi} value={uploadBatch} onChange={e => setUploadBatch(e.target.value)} placeholder="z.B. 01.04.26 / Osteraktion" />
-                    </div>
-                    <div>
-                      <label style={st.fl}>Produkt</label>
-                      <input style={st.fi} value={uploadProduct} onChange={e => setUploadProduct(e.target.value)} placeholder="z.B. 3D Stift" />
+                      <label style={s.fl}>Bezeichnung *</label>
+                      <input style={s.fi} value={uLabel} onChange={e => setULabel(e.target.value)} placeholder="z.B. Lookbook Shot 01" />
                     </div>
                   </div>
 
-                  <div className="dz" onClick={() => fileRef.current?.click()} style={{ marginBottom: 12 }}>
-                    {uploadFile ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 24 }}>{uploadFile.type.startsWith('image/') ? '🖼️' : '🎬'}</span>
-                        <div style={{ textAlign: 'left' as const }}>
-                          <div style={{ fontSize: 12, fontWeight: 500 }}>{uploadFile.name}</div>
-                          <div style={{ fontSize: 10, color: '#888' }}>{formatSize(uploadFile.size)}</div>
+                  {/* Row 2: Batch + Produkt */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <label style={s.fl}>Batch (optional)</label>
+                      <input style={s.fi} value={uBatch} onChange={e => setUBatch(e.target.value)} placeholder="z.B. 01.04.26 / Osteraktion" />
+                    </div>
+                    <div>
+                      <label style={s.fl}>Produkt (optional)</label>
+                      <input style={s.fi} value={uProduct} onChange={e => setUProduct(e.target.value)} placeholder="z.B. 3D Stift" />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Google Drive Link */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={s.fl}>Google Drive Link (optional)</label>
+                    <input style={s.fi} value={uLink} onChange={e => setULink(e.target.value)} placeholder="https://drive.google.com/..." />
+                  </div>
+
+                  {/* Dropzone */}
+                  <div
+                    style={{ border: '1.5px dashed #e8e8ec', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14, transition: 'border-color .15s' }}
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUFile(f) }}
+                  >
+                    {uFile ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                        <span style={{ fontSize: 22 }}>{uFile.type.startsWith('image/') ? '🖼️' : '🎬'}</span>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: '#111' }}>{uFile.name}</div>
+                          <div style={{ fontSize: 10, color: '#888' }}>{fmtSize(uFile.size)}</div>
                         </div>
-                        <span style={{ marginLeft: 'auto', color: '#16a34a', fontSize: 18 }}>✓</span>
+                        <span style={{ marginLeft: 8, color: '#16a34a', fontSize: 18 }}>✓</span>
                       </div>
                     ) : (
                       <>
                         <div style={{ fontSize: 22, marginBottom: 6 }}>📂</div>
-                        <div style={{ fontSize: 12, fontWeight: 500 }}>Klicken oder Datei hierher ziehen</div>
-                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Bilder & Videos bis 500 MB</div>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: '#555' }}>Klicken oder Datei hierher ziehen</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Bilder & Videos bis 500 MB · optional wenn Link angegeben</div>
                       </>
                     )}
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={e => setUploadFile(e.target.files?.[0] || null)} />
+                  <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
+                    onChange={e => setUFile(e.target.files?.[0] || null)} />
 
+                  {/* Progress */}
                   {uploading && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 11, marginBottom: 4, color: '#666' }}>Upload: {uploadProgress}%</div>
-                      <div className="prog-track"><div className="prog-fill" style={{ width: `${uploadProgress}%` }} /></div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Upload: {uploadPct}%</div>
+                      <div style={{ height: 5, background: '#e8e8ec', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', background: '#4f6ef7', borderRadius: 3, width: `${uploadPct}%`, transition: 'width .1s' }} />
+                      </div>
                     </div>
                   )}
-                  <button style={{ ...st.btnP, width: '100%' }} onClick={handleUpload} disabled={uploading}>
-                    {uploading ? 'Wird hochgeladen...' : 'Hochladen →'}
+
+                  <button style={{ ...s.btnP, width: '100%' }} onClick={handleUpload} disabled={uploading}>
+                    {uploading ? `Wird hochgeladen... ${uploadPct}%` : 'Hochladen →'}
                   </button>
                 </div>
 
-                {/* Hochgeladene Dateien unterhalb */}
+                {/* Uploaded files overview */}
                 {uploads.length > 0 && (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 18 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>📁 Deine hochgeladenen Dateien ({uploads.length})</div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 }}>
+                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 18, marginTop: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 14 }}>
+                      Deine hochgeladenen Dateien ({uploads.length})
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                       {TABS.map(t => (
-                        <button key={t.key} className={`tab-btn${uploadCategory === t.key ? ' on' : ''}`}
-                          style={{ padding: '4px 10px', borderBottom: 'none', borderRadius: 6, border: `1px solid ${uploadCategory === t.key ? '#111' : '#e8e8ec'}`, background: uploadCategory === t.key ? '#111' : '#fff', color: uploadCategory === t.key ? '#fff' : '#888' }}
-                          onClick={() => setUploadCategory(t.key)}>
-                          {t.icon} {t.label} ({uploads.filter(u => u.category === t.key).length})
+                        <button key={t.key}
+                          style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${uCategory === t.key ? '#111' : '#e8e8ec'}`, background: uCategory === t.key ? '#111' : '#fff', color: uCategory === t.key ? '#fff' : '#888', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+                          onClick={() => setUCategory(t.key)}>
+                          {t.icon} {t.label} ({uploads.filter(u => u.tab === t.key).length})
                         </button>
                       ))}
                     </div>
-                    {uploads.filter(u => u.category === uploadCategory).length === 0 ? (
-                      <div style={{ color: '#aaa', fontSize: 12 }}>Keine Dateien in dieser Kategorie.</div>
+                    {uploads.filter(u => u.tab === uCategory).length === 0 ? (
+                      <div style={{ color: '#aaa', fontSize: 12 }}>Noch keine Dateien in dieser Kategorie.</div>
                     ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-                        {uploads.filter(u => u.category === uploadCategory).map(u => (
-                          <div key={u.id} className="file-card">
-                            <div className="file-thumb">
-                              {u.mime_type?.startsWith('image/') ? (
-                                <img src={u.file_url} alt={u.name} />
-                              ) : u.mime_type?.startsWith('video/') ? (
-                                <span>🎬</span>
-                              ) : (
-                                <span>📄</span>
-                              )}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+                        {uploads.filter(u => u.tab === uCategory).map(u => (
+                          <div key={u.id} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden' }}>
+                            <div style={{ height: 80, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                              {u.mime_type?.startsWith('image/') && u.file_url
+                                ? <img src={u.file_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : u.file_type === 'video' ? '🎬'
+                                : u.file_type === 'link' ? '🔗'
+                                : '📄'}
                             </div>
-                            <div style={{ padding: '8px 10px' }}>
-                              <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</div>
-                              {u.batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {u.batch}</div>}
-                              {u.product && <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>🏷️ {u.product}</div>}
-                              <div style={{ fontSize: 10, color: '#aaa', marginTop: 3 }}>{formatDate(u.created_at)}{u.file_size ? ` · ${formatSize(u.file_size)}` : ''}</div>
-                              <a href={u.file_url} target="_blank" rel="noreferrer"
-                                style={{ display: 'inline-block', marginTop: 6, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 7px' }}>
-                                Öffnen ↗
-                              </a>
+                            <div style={{ padding: '7px 9px' }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
+                              <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}</div>
+                              {u.file_url && (
+                                <a href={u.file_url} target="_blank" rel="noreferrer"
+                                  style={{ display: 'inline-block', marginTop: 4, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 6px' }}>
+                                  Öffnen ↗
+                                </a>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -499,64 +516,41 @@ export default function CreatorPortal() {
                     )}
                   </div>
                 )}
-
-                {/* Existing links */}
-                {activeDate && (activeDate.links?.length || 0) > 0 && (
-                  <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>
-                      Eingetragene Links — {new Date(activeDate.month + '-01').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
-                    </div>
-                    {(activeDate.links || []).map(link => (
-                      <div key={link.id} className="link-row">
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🔗</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600 }}>{link.title}</div>
-                          <div style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.url}</div>
-                        </div>
-                        <a href={link.url} target="_blank" rel="noreferrer"
-                          style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 7, padding: '5px 10px', fontSize: 11, color: '#666', textDecoration: 'none' }}>
-                          Öffnen ↗
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </>
             )}
 
-            {/* ── TIPPS ── */}
+            {/* ── TIPS ── */}
             {page === 'tips' && (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>💡 Tipps &amp; Tricks</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 6 }}>Tipps & Tricks</div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Klicke auf eine Kategorie.</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
                   {[
                     { id: 'briefings', icon: '📋', label: 'Briefings' },
                     { id: 'skripte', icon: '📝', label: 'Skripte' },
                     { id: 'lernvideos', icon: '🎬', label: 'Lernvideos' },
-                    { id: null, icon: '🤖', label: 'Skript-Generator', soon: true },
                   ].map(c => (
-                    <div key={c.label} className="tip-card" style={c.soon ? { opacity: .5, cursor: 'default' } : {}}
-                      onClick={() => { if (!c.soon && c.id) setPage(c.id as NavPage) }}>
-                      <div style={{ fontSize: 32, marginBottom: 8 }}>{c.icon}</div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</div>
-                      {c.soon && <div style={{ fontSize: 10, color: '#ea580c', marginTop: 4 }}>Bald verfügbar</div>}
+                    <div key={c.id}
+                      style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20, cursor: 'pointer', textAlign: 'center' }}
+                      onClick={() => setPage(c.id as NavPage)}>
+                      <div style={{ fontSize: 28, marginBottom: 8 }}>{c.icon}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{c.label}</div>
                     </div>
                   ))}
                 </div>
               </>
             )}
 
-            {/* ── SUB-PAGES ── */}
+            {/* ── SUB-PAGES (Briefings, Skripte, Lernvideos) ── */}
             {(page === 'briefings' || page === 'skripte' || page === 'lernvideos') && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                  <button onClick={() => setPage('tips')} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>← Zurück</button>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <button onClick={() => setPage('tips')} style={s.btnGhost}>← Zurück</button>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
                     {page === 'briefings' ? '📋 Briefings' : page === 'skripte' ? '📝 Skripte' : '🎬 Lernvideos'}
                   </div>
                 </div>
-                <div style={{ color: '#888', fontSize: 13, background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 24, textAlign: 'center' as const }}>
+                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 28, textAlign: 'center', color: '#aaa', fontSize: 13 }}>
                   Noch keine Inhalte vorhanden. Der Admin fügt diese hier ein.
                 </div>
               </>
@@ -568,7 +562,7 @@ export default function CreatorPortal() {
 
       {/* TOAST */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#fff', border: '1px solid #e8e8ec', borderLeft: '3px solid #16a34a', borderRadius: 8, padding: '10px 16px', fontSize: 13, zIndex: 9999, boxShadow: '0 2px 12px rgba(0,0,0,.1)' }}>
+        <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#fff', border: '1px solid #e8e8ec', borderLeft: '3px solid #16a34a', borderRadius: 8, padding: '10px 16px', fontSize: 13, zIndex: 9999, boxShadow: '0 2px 12px rgba(0,0,0,.1)', color: '#111' }}>
           {toast}
         </div>
       )}
@@ -576,12 +570,26 @@ export default function CreatorPortal() {
   )
 }
 
-const st: any = {
-  fl: { display: 'block', fontSize: 9, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 4 },
-  fi: { width: '100%', border: '1px solid #e8e8ec', borderRadius: 7, padding: '7px 9px', fontFamily: 'inherit', fontSize: 12, outline: 'none', background: '#fff', color: '#111' },
-  btnP: { background: '#111', color: '#fff', border: '1px solid #111', borderRadius: 7, padding: '9px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', width: '100%' },
+// ── STYLES ────────────────────────────────────────────────────────────────
+const css = `
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,sans-serif;font-size:13px;color:#111;}
+  .ni{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:#777;margin-bottom:1px;user-select:none;}
+  .ni:hover,.ni.on{background:#f0f0f3;color:#111;}
+  .ni.on{font-weight:500;}
+  .tab-btn{padding:8px 14px;border:none;background:none;cursor:pointer;font-size:12px;color:#777;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;}
+  .tab-btn.on{color:#111;font-weight:600;border-bottom-color:#111;}
+  .tab-btn:hover:not(.on){color:#444;}
+`
+
+const s: Record<string, React.CSSProperties> = {
+  fl: { display: 'block', fontSize: 9, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 5 },
+  fi: { width: '100%', border: '1px solid #e8e8ec', borderRadius: 7, padding: '8px 10px', fontFamily: 'inherit', fontSize: 12, outline: 'none', background: '#fff', color: '#111' },
+  btnP: { background: '#111', color: '#fff', border: '1px solid #111', borderRadius: 8, padding: '10px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  btnGhost: { background: '#fff', border: '1px solid #e8e8ec', borderRadius: 7, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: '#666', fontFamily: 'inherit' },
   sc: { background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: '10px 14px' },
-  sl: { fontSize: 9, color: '#aaa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 },
-  sv: { fontSize: 22, fontWeight: 700 },
-  navLabel: { fontSize: 9, fontWeight: 600, color: '#bbb', textTransform: 'uppercase', letterSpacing: 1, padding: '0 6px', marginBottom: 4 },
+  sl: { fontSize: 9, color: '#aaa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 },
+  sv: { fontSize: 22, fontWeight: 700, color: '#111' },
+  navLabel: { fontSize: 9, fontWeight: 600, color: '#bbb', textTransform: 'uppercase', letterSpacing: 1, padding: '0 6px', marginBottom: 5 },
+  errBox: { background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#dc2626', marginBottom: 14 },
 }
