@@ -1053,7 +1053,7 @@ function rFiles(fld){
     G('no-f-btn')?.addEventListener('click',()=>openM('upload'));return;
   }
   el.innerHTML=fld.files.map(f=>{
-    const isI=f.type==='image',isV=f.type==='video';
+    const isI=f.type==='image'||(f.mimeType||'').startsWith('image/')||(f.mime_type||'').startsWith('image/'),isV=f.type==='video'||(f.mimeType||'').startsWith('video/')||(f.mime_type||'').startsWith('video/');
     const th=f.url?(isI?\`<img src="\${f.url}">\`:\`<video src="\${f.url}" preload="metadata"></video>\`):\`<span>\${isI?'🖼️':isV?'🎬':'📄'}</span>\`;
     const pov=isV?\`<div class="play-ov"><div class="play-btn">▶</div></div>\`:'';
     const isSel=S.bulkSel.includes(f.id);
@@ -1065,7 +1065,7 @@ function rFiles(fld){
       <div class="fi-thumb" data-lb="\${f.id}" data-lb-fld="\${fld.id}">\${th}\${pov}\${cbHtml}\${commBadge}</div>
       <div class="fi-info">
         <div class="fi-name" title="\${f.name}">\${f.name}</div>
-        <div class="fi-meta">\${f.size||''}</div>
+      <div class="fi-meta">\${f.name&&f.name!==f.file_name?f.name+' · ':''}\${f.batch?'📦 '+f.batch+' · ':''}\${f.product?'🏷️ '+f.product+' · ':''}\${f.size||''}</div>
         <div class="fi-acts">
           <a class="fi-btn" href="\${f.url||'#'}" download="\${f.name}">⬇</a>
           <button class="fi-btn \${upClass}" data-up="\${f.id}" data-ufl="\${fld.id}" title="\${upTitle}">\${f.uploadedAt?'✓':'○'}</button>
