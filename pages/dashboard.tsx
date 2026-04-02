@@ -1153,7 +1153,7 @@ function delFile(fid,fldId){
   const fileObj=(()=>{for(const t of Object.keys(S.aC?.flds||{})){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){return f.files.find(x=>x.id===fid)||null;}}return null;})();
   askConfirm('Datei löschen?',async()=>{
     const token=localStorage.getItem('token')||localStorage.getItem('creator_token')||'';
-    try{await fetch('/api/upload',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({uploadId:String(fid),r2Key:fileObj?.r2Key||null})});}catch(e){}
+    try{await fetch('/api/delete-upload',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({uploadId:String(fid),r2Key:fileObj?.r2Key||null})});}catch(e){}
     for(const t of Object.keys(S.aC.flds)){const f=S.aC.flds[t].find(x=>x.id===fldId);if(f){f.files=f.files.filter(x=>x.id!==fid);rFiles(f);rCHdr();showT('Datei gelöscht ✓');return;}}
   });
 }
