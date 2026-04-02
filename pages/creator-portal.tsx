@@ -1,4 +1,4 @@
-// v2.1 – Lightbox für Bild/Video, Google Drive öffnet neues Fenster, kein "Öffnen" Button
+// v2.5 – Profilbild änderbar, "zeigt Kinder" entfernt, Video-Lightbox Fix
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -26,6 +26,8 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'auswertung', label: 'Auswertungen', icon: '📊' },
 ]
 
+const FLAG: Record<string, string> = { DE: '🇩🇪', AT: '🇦🇹', CH: '🇨🇭', US: '🇺🇸', GB: '🇬🇧' }
+
 export default function CreatorPortal() {
   const router = useRouter()
   const [view, setView] = useState<'login' | 'portal'>('login')
@@ -39,7 +41,7 @@ export default function CreatorPortal() {
   const [toast, setToast] = useState('')
   const [lightbox, setLightbox] = useState<Upload | null>(null)
 
-  // Upload form state
+  // Upload form
   const [uCategory, setUCategory] = useState<Tab>('bilder')
   const [uLabel, setULabel] = useState('')
   const [uBatch, setUBatch] = useState('')
@@ -49,8 +51,8 @@ export default function CreatorPortal() {
   const [uploading, setUploading] = useState(false)
   const [uploadPct, setUploadPct] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
+  const photoRef = useRef<HTMLInputElement>(null)
 
-  // Auto-login from URL code
   useEffect(() => {
     if (!router.isReady) return
     const urlCode = router.query.code as string
@@ -82,9 +84,7 @@ export default function CreatorPortal() {
       setCreator(data.creator)
       await loadUploads(data.creator.id, data.token)
       setView('portal')
-    } catch {
-      setError('Verbindungsfehler. Bitte versuche es erneut.')
-    }
+    } catch { setError('Verbindungsfehler.') }
     setLoading(false)
   }
 
@@ -98,6 +98,54 @@ export default function CreatorPortal() {
     } catch {}
   }
 
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const token = localStorage.getItem('creator_token') || ''
+    showToast('Profilbild wird hochgeladen...')
+    try {
+      // Schritt 1: Presigned URL
+      const urlRes = await fetch('/api/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, creatorId: String(creator.id), tab: 'profile' })
+      })
+      if (!urlRes.ok) { showToast('Fehler beim Vorbereiten'); return }
+      const { signedUrl, publicUrl } = await urlRes.json()
+
+      // Schritt 2: Direkt zu R2
+      const putRes = await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file
+      })
+      if (!putRes.ok) { showToast('Upload fehlgeschlagen'); return }
+
+      // Schritt 3: Supabase updaten
+      const patchRes = await fetch('/api/creators', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: creator.id, photo: publicUrl })
+      })
+      if (!patchRes.ok) { showToast('Fehler beim Speichern'); return }
+
+      const updated = { ...creator, photo: publicUrl }
+      setCreator(updated)
+      localStorage.setItem('creator', JSON.stringify(updated))
+      showToast('Profilbild aktualisiert ✓')
+    } catch { showToast('Fehler beim Upload') }
+  }
+
+  function handleCardClick(u: Upload) {
+    if (u.file_type === 'link') { window.open(u.file_url, '_blank'); return }
+    const isVideo = u.file_type === 'video' || u.mime_type?.startsWith('video/')
+    const isImage = u.file_type === 'image' || u.mime_type?.startsWith('image/')
+    if (isVideo || isImage) { setLightbox(u); return }
+    window.open(u.file_url, '_blank')
+  }
+
+  function closeLightbox() { setLightbox(null) }
+
   async function handleUpload() {
     if (!uLabel.trim()) { showToast('Bitte eine Bezeichnung eingeben'); return }
     if (!uFile && !uLink.trim()) { showToast('Bitte eine Datei auswählen oder einen Link eintragen'); return }
@@ -105,7 +153,7 @@ export default function CreatorPortal() {
     const token = localStorage.getItem('creator_token') || ''
     setUploading(true); setUploadPct(0)
 
-    // ── Link-only Upload ──────────────────────────────────────────────────
+    // Link-only
     if (uLink.trim() && !uFile) {
       try {
         const fd = new FormData()
@@ -115,72 +163,43 @@ export default function CreatorPortal() {
         fd.append('tab', uCategory)
         if (uBatch.trim()) fd.append('batch', uBatch.trim())
         if (uProduct.trim()) fd.append('product', uProduct.trim())
-
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd
-        })
+        const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
         const data = await res.json()
         if (!res.ok) { showToast('Fehler: ' + (data.error || 'Unbekannt')); setUploading(false); return }
-        showToast(`"${uLabel}" wurde gespeichert ✓`)
+        showToast(`"${uLabel}" gespeichert ✓`)
         resetForm()
         await loadUploads(creator.id, token)
-      } catch { showToast('Fehler beim Speichern') }
+      } catch { showToast('Fehler') }
       setUploading(false)
       return
     }
 
-    // ── Datei Upload via Presigned URL (direkt zu R2) ─────────────────────
+    // Presigned URL Upload
     try {
-      // Schritt 1: Presigned URL von der API holen
       setUploadPct(5)
       const urlRes = await fetch('/api/upload-url', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          fileName: uFile!.name,
-          fileType: uFile!.type,
-          creatorId: String(creator.id),
-          tab: uCategory
-        })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: uFile!.name, fileType: uFile!.type, creatorId: String(creator.id), tab: uCategory })
       })
-
-      if (!urlRes.ok) {
-        const err = await urlRes.json()
-        showToast('Fehler beim Vorbereiten: ' + (err.error || 'Unbekannt'))
-        setUploading(false)
-        return
-      }
-
+      if (!urlRes.ok) { showToast('Fehler beim Vorbereiten'); setUploading(false); return }
       const { signedUrl, key, publicUrl } = await urlRes.json()
       setUploadPct(10)
 
-      // Schritt 2: Datei direkt zu R2 hochladen via XHR (für Progress)
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.open('PUT', signedUrl)
         xhr.setRequestHeader('Content-Type', uFile!.type)
         xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            // Progress von 10% bis 90%
-            setUploadPct(10 + Math.round(e.loaded / e.total * 80))
-          }
+          if (e.lengthComputable) setUploadPct(10 + Math.round(e.loaded / e.total * 80))
         }
-        xhr.onload = () => {
-          if (xhr.status === 200 || xhr.status === 204) resolve()
-          else reject(new Error('R2 Upload fehlgeschlagen: ' + xhr.status))
-        }
+        xhr.onload = () => (xhr.status === 200 || xhr.status === 204) ? resolve() : reject(new Error('R2 Fehler: ' + xhr.status))
         xhr.onerror = () => reject(new Error('Netzwerkfehler'))
         xhr.send(uFile)
       })
 
       setUploadPct(90)
 
-      // Schritt 3: Supabase-Eintrag via API erstellen
       const fd = new FormData()
       fd.append('creatorId', String(creator.id))
       fd.append('tab', uCategory)
@@ -192,28 +211,15 @@ export default function CreatorPortal() {
       if (uBatch.trim()) fd.append('batch', uBatch.trim())
       if (uProduct.trim()) fd.append('product', uProduct.trim())
 
-      const saveRes = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd
-      })
-
+      const saveRes = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
       const saveData = await saveRes.json()
-      if (!saveRes.ok) {
-        showToast('Datei hochgeladen aber Fehler beim Speichern: ' + (saveData.error || 'Unbekannt'))
-        setUploading(false)
-        return
-      }
+      if (!saveRes.ok) { showToast('Fehler beim Speichern: ' + (saveData.error || '')); setUploading(false); return }
 
       setUploadPct(100)
-      showToast(`"${uLabel}" erfolgreich hochgeladen ✓`)
+      showToast(`"${uLabel}" hochgeladen ✓`)
       resetForm()
       await loadUploads(creator.id, token)
-
-    } catch (err: any) {
-      showToast('Fehler: ' + (err.message || 'Unbekannt'))
-    }
-
+    } catch (err: any) { showToast('Fehler: ' + (err.message || 'Unbekannt')) }
     setUploading(false)
   }
 
@@ -223,41 +229,17 @@ export default function CreatorPortal() {
     setUploadPct(0)
   }
 
-  function handleCardClick(u: Upload) {
-    if (u.file_type === 'link') {
-      window.open(u.file_url, '_blank')
-      return
-    }
-    // Prüfe mime_type als Fallback wenn file_type null ist
-    const isVideo = u.file_type === 'video' || u.mime_type?.startsWith('video/')
-    const isImage = u.file_type === 'image' || u.mime_type?.startsWith('image/')
-    if (isVideo || isImage) {
-      setLightbox(u)
-      return
-    }
-    // Fallback: neues Fenster
-    window.open(u.file_url, '_blank')
-  }
-
-  function closeLightbox() { setLightbox(null) }
-
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3500)
-  }
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
   function logout() {
-    localStorage.removeItem('creator_token')
-    localStorage.removeItem('creator')
+    localStorage.removeItem('creator_token'); localStorage.removeItem('creator')
     setView('login'); setCreator(null); setUploads([]); setCode('')
     router.push('/creator')
   }
 
   function fmtSize(bytes: number | null) {
     if (!bytes) return ''
-    return bytes > 1024 * 1024
-      ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
-      : `${(bytes / 1024).toFixed(0)} KB`
+    return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`
   }
 
   function fmtDate(str: string) {
@@ -279,14 +261,8 @@ export default function CreatorPortal() {
           <form onSubmit={e => { e.preventDefault(); loginWithCode(code) }}>
             <div style={{ marginBottom: 14 }}>
               <label style={s.fl}>Einladungscode</label>
-              <input
-                style={{ ...s.fi, fontSize: 22, fontWeight: 700, letterSpacing: 6, textAlign: 'center', textTransform: 'uppercase' }}
-                value={code}
-                onChange={e => setCode(e.target.value.toUpperCase())}
-                placeholder="XXXXXXXX"
-                maxLength={8}
-                required
-              />
+              <input style={{ ...s.fi, fontSize: 22, fontWeight: 700, letterSpacing: 6, textAlign: 'center', textTransform: 'uppercase' }}
+                value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="XXXXXXXX" maxLength={8} required />
             </div>
             {error && <div style={s.errBox}>{error}</div>}
             <button style={{ ...s.btnP, marginTop: 8 }} type="submit" disabled={loading}>
@@ -361,20 +337,22 @@ export default function CreatorPortal() {
 
                 {/* CREATOR PROFIL KARTE */}
                 <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
-                  {/* Avatar */}
-                  {creator?.photo
-                    ? <img src={creator.photo} alt={creator.name} style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: 54, height: 54, borderRadius: '50%', background: creator?.color_from || '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                        {creator?.initials || creator?.name?.slice(0,2).toUpperCase()}
-                      </div>
-                  }
-                  {/* Info */}
+                  <div style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }} onClick={() => photoRef.current?.click()} title="Profilbild ändern">
+                    {creator?.photo
+                      ? <img src={creator.photo} alt={creator.name} style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover' }} />
+                      : <div style={{ width: 54, height: 54, borderRadius: '50%', background: creator?.color_from || '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                          {creator?.initials || creator?.name?.slice(0, 2).toUpperCase()}
+                        </div>
+                    }
+                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderRadius: '50%', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', border: '2px solid #fff' }}>✏️</div>
+                  </div>
+                  <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 2 }}>{creator?.name}</div>
                     <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
-                      {creator?.email}{creator?.age > 0 ? ` · ${creator.age}J` : ''}{creator?.country ? ` · ${{'DE':'🇩🇪','AT':'🇦🇹','CH':'🇨🇭','US':'🇺🇸','GB':'🇬🇧'}[creator.country] || creator.country}` : ''}
+                      {creator?.email}{creator?.age > 0 ? ` · ${creator.age}J` : ''}{creator?.country ? ` · ${FLAG[creator.country] || creator.country}` : ''}
                     </div>
-                    {/* Tags + Vergütung + Kinder */}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                       {(creator?.tags || []).map((t: string) => (
                         <span key={t} style={{ background: '#eff2ff', color: '#4f6ef7', border: '1px solid #d0d8ff', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>{t}</span>
@@ -391,31 +369,19 @@ export default function CreatorPortal() {
                       {creator?.kids && (creator?.kids_ages || []).map((a: string) => (
                         <span key={a} style={{ background: '#f4f5f7', border: '1px solid #e8e8ec', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>👶 {a}J</span>
                       ))}
-                      {creator?.kids_on_vid && (
-                        <span style={{ background: '#f4f5f7', border: '1px solid #e8e8ec', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>📷 zeigt Kinder</span>
-                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* STATS */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 18 }}>
-                  <div style={s.sc}>
-                    <div style={s.sl}>Kategorien</div>
-                    <div style={s.sv}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div>
-                  </div>
-                  <div style={s.sc}>
-                    <div style={s.sl}>Dateien gesamt</div>
-                    <div style={s.sv}>{totalUploads}</div>
-                  </div>
-                  <div style={s.sc}>
-                    <div style={s.sl}>Hochgeladen</div>
-                    <div style={{ ...s.sv, color: '#16a34a' }}>{totalUploads}</div>
-                  </div>
+                  <div style={s.sc}><div style={s.sl}>Kategorien</div><div style={s.sv}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div></div>
+                  <div style={s.sc}><div style={s.sl}>Dateien gesamt</div><div style={s.sv}>{totalUploads}</div></div>
+                  <div style={s.sc}><div style={s.sl}>Hochgeladen</div><div style={{ ...s.sv, color: '#16a34a' }}>{totalUploads}</div></div>
                 </div>
 
-                {/* CATEGORY TABS */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', marginBottom: 0, background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
+                {/* TABS */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
                   {TABS.map(t => (
                     <button key={t.key} className={`tab-btn${activeTab === t.key ? ' on' : ''}`} onClick={() => setActiveTab(t.key)}>
                       {t.icon} {t.label}
@@ -430,7 +396,7 @@ export default function CreatorPortal() {
 
                 {/* FILE GRID */}
                 {tabUploads.length === 0 ? (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center', color: '#aaa' }}>
+                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center' }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>{TABS.find(t => t.key === activeTab)?.icon}</div>
                     <div style={{ fontSize: 13, marginBottom: 12, color: '#888' }}>Noch keine Inhalte in dieser Kategorie</div>
                     <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>+ Hochladen</button>
@@ -439,20 +405,16 @@ export default function CreatorPortal() {
                   <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                       {tabUploads.map(u => (
-                        <div
-                          key={u.id}
-                          onClick={() => handleCardClick(u)}
+                        <div key={u.id} onClick={() => handleCardClick(u)}
                           style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
                           onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}
-                        >
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
                           <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
                             {u.mime_type?.startsWith('image/') && u.file_url
                               ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : u.file_type === 'video' ? '🎬'
-                              : u.file_type === 'link' ? '🔗'
-                              : '📄'}
-                            {u.file_type === 'video' && (
+                              : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
+                              : u.file_type === 'link' ? '🔗' : '📄'}
+                            {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
                               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
                               </div>
@@ -467,10 +429,8 @@ export default function CreatorPortal() {
                           </div>
                         </div>
                       ))}
-                      <div
-                        style={{ border: '1.5px dashed #e8e8ec', borderRadius: 9, minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: '#aaa' }}
-                        onClick={() => { setUCategory(activeTab); setPage('upload') }}
-                      >
+                      <div style={{ border: '1.5px dashed #e8e8ec', borderRadius: 9, minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: '#aaa' }}
+                        onClick={() => { setUCategory(activeTab); setPage('upload') }}>
                         <div style={{ fontSize: 18 }}>+</div>
                         <span style={{ fontSize: 10, fontWeight: 500 }}>Hochladen</span>
                       </div>
@@ -486,11 +446,8 @@ export default function CreatorPortal() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 16 }}>Inhalte hochladen</div>
                 <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 4 }}>Datei hochladen</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>
-                    Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.
-                  </div>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.</div>
 
-                  {/* Row 1: Kategorie + Bezeichnung */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <div>
                       <label style={s.fl}>Kategorie</label>
@@ -507,7 +464,6 @@ export default function CreatorPortal() {
                     </div>
                   </div>
 
-                  {/* Row 2: Batch + Produkt */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <div>
                       <label style={s.fl}>Batch (optional)</label>
@@ -519,19 +475,15 @@ export default function CreatorPortal() {
                     </div>
                   </div>
 
-                  {/* Row 3: Google Drive Link */}
                   <div style={{ marginBottom: 14 }}>
                     <label style={s.fl}>Google Drive Link (optional)</label>
                     <input style={s.fi} value={uLink} onChange={e => setULink(e.target.value)} placeholder="https://drive.google.com/..." />
                   </div>
 
-                  {/* Dropzone */}
-                  <div
-                    style={{ border: '1.5px dashed #e8e8ec', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14 }}
+                  <div style={{ border: '1.5px dashed #e8e8ec', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14 }}
                     onClick={() => fileRef.current?.click()}
                     onDragOver={e => e.preventDefault()}
-                    onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUFile(f) }}
-                  >
+                    onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUFile(f) }}>
                     {uFile ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
                         <span style={{ fontSize: 22 }}>{uFile.type.startsWith('image/') ? '🖼️' : '🎬'}</span>
@@ -545,14 +497,12 @@ export default function CreatorPortal() {
                       <>
                         <div style={{ fontSize: 22, marginBottom: 6 }}>📂</div>
                         <div style={{ fontSize: 12, fontWeight: 500, color: '#555' }}>Klicken oder Datei hierher ziehen</div>
-                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Bilder & Videos bis 500 MB · optional wenn Link angegeben</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Bilder & Videos · optional wenn Link angegeben</div>
                       </>
                     )}
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
-                    onChange={e => setUFile(e.target.files?.[0] || null)} />
+                  <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={e => setUFile(e.target.files?.[0] || null)} />
 
-                  {/* Progress */}
                   {uploading && (
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Upload: {uploadPct}%</div>
@@ -567,12 +517,9 @@ export default function CreatorPortal() {
                   </button>
                 </div>
 
-                {/* Uploaded files overview */}
                 {uploads.length > 0 && (
                   <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 18, marginTop: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 14 }}>
-                      Deine hochgeladenen Dateien ({uploads.length})
-                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 14 }}>Deine hochgeladenen Dateien ({uploads.length})</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                       {TABS.map(t => (
                         <button key={t.key}
@@ -587,19 +534,15 @@ export default function CreatorPortal() {
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                         {uploads.filter(u => u.tab === uCategory).map(u => (
-                          <div
-                            key={u.id}
-                            onClick={() => handleCardClick(u)}
+                          <div key={u.id} onClick={() => handleCardClick(u)}
                             style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
                             onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
-                            onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}
-                          >
+                            onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
                             <div style={{ height: 80, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                               {u.mime_type?.startsWith('image/') && u.file_url
                                 ? <img src={u.file_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                : u.file_type === 'video' ? '🎬'
-                                : u.file_type === 'link' ? '🔗'
-                                : '📄'}
+                                : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
+                                : u.file_type === 'link' ? '🔗' : '📄'}
                             </div>
                             <div style={{ padding: '7px 9px' }}>
                               <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
@@ -621,13 +564,8 @@ export default function CreatorPortal() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 6 }}>Tipps & Tricks</div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Klicke auf eine Kategorie.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
-                  {[
-                    { id: 'briefings', icon: '📋', label: 'Briefings' },
-                    { id: 'skripte', icon: '📝', label: 'Skripte' },
-                    { id: 'lernvideos', icon: '🎬', label: 'Lernvideos' },
-                  ].map(c => (
-                    <div key={c.id}
-                      style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20, cursor: 'pointer', textAlign: 'center' }}
+                  {[{ id: 'briefings', icon: '📋', label: 'Briefings' }, { id: 'skripte', icon: '📝', label: 'Skripte' }, { id: 'lernvideos', icon: '🎬', label: 'Lernvideos' }].map(c => (
+                    <div key={c.id} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20, cursor: 'pointer', textAlign: 'center' }}
                       onClick={() => setPage(c.id as NavPage)}>
                       <div style={{ fontSize: 28, marginBottom: 8 }}>{c.icon}</div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{c.label}</div>
@@ -651,7 +589,6 @@ export default function CreatorPortal() {
                 </div>
               </>
             )}
-
           </div>
         </div>
       </div>
@@ -665,14 +602,8 @@ export default function CreatorPortal() {
 
       {/* LIGHTBOX */}
       {lightbox && (
-        <div
-          onClick={closeLightbox}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 9998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-        >
-          <button
-            onClick={closeLightbox}
-            style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >✕</button>
+        <div onClick={closeLightbox} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 9998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <button onClick={closeLightbox} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
             {(() => {
               const isVideo = lightbox.file_type === 'video' || lightbox.mime_type?.startsWith('video/')
@@ -687,20 +618,16 @@ export default function CreatorPortal() {
                 {fmtDate(lightbox.created_at)}{lightbox.file_size ? ` · ${fmtSize(lightbox.file_size)}` : ''}
               </div>
             </div>
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch(lightbox.file_url)
-                  const blob = await res.blob()
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = lightbox.file_name
-                  a.click()
-                  URL.revokeObjectURL(url)
-                } catch { window.open(lightbox.file_url, '_blank') }
-              }}
-              style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={async () => {
+              try {
+                const res = await fetch(lightbox.file_url)
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url; a.download = lightbox.file_name; a.click()
+                URL.revokeObjectURL(url)
+              } catch { window.open(lightbox.file_url, '_blank') }
+            }} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
               ⬇ Herunterladen
             </button>
           </div>
