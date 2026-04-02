@@ -228,7 +228,15 @@ export default function CreatorPortal() {
       window.open(u.file_url, '_blank')
       return
     }
-    setLightbox(u)
+    // Prüfe mime_type als Fallback wenn file_type null ist
+    const isVideo = u.file_type === 'video' || u.mime_type?.startsWith('video/')
+    const isImage = u.file_type === 'image' || u.mime_type?.startsWith('image/')
+    if (isVideo || isImage) {
+      setLightbox(u)
+      return
+    }
+    // Fallback: neues Fenster
+    window.open(u.file_url, '_blank')
   }
 
   function closeLightbox() { setLightbox(null) }
@@ -349,6 +357,45 @@ export default function CreatorPortal() {
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>Willkommen zurück 👋</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
+                </div>
+
+                {/* CREATOR PROFIL KARTE */}
+                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  {/* Avatar */}
+                  {creator?.photo
+                    ? <img src={creator.photo} alt={creator.name} style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 54, height: 54, borderRadius: '50%', background: creator?.color_from || '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {creator?.initials || creator?.name?.slice(0,2).toUpperCase()}
+                      </div>
+                  }
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 2 }}>{creator?.name}</div>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
+                      {creator?.email}{creator?.age > 0 ? ` · ${creator.age}J` : ''}{creator?.country ? ` · ${{'DE':'🇩🇪','AT':'🇦🇹','CH':'🇨🇭','US':'🇺🇸','GB':'🇬🇧'}[creator.country] || creator.country}` : ''}
+                    </div>
+                    {/* Tags + Vergütung + Kinder */}
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {(creator?.tags || []).map((t: string) => (
+                        <span key={t} style={{ background: '#eff2ff', color: '#4f6ef7', border: '1px solid #d0d8ff', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>{t}</span>
+                      ))}
+                      {creator?.verguetung === 'provision' && creator?.provision && (
+                        <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% Provision</span>
+                      )}
+                      {creator?.verguetung === 'fix' && creator?.fixbetrag && (
+                        <span style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>💶 {creator.fixbetrag}€ Fix</span>
+                      )}
+                      {creator?.verguetung === 'beides' && (
+                        <span style={{ background: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% + 💶 {creator.fixbetrag}€</span>
+                      )}
+                      {creator?.kids && (creator?.kids_ages || []).map((a: string) => (
+                        <span key={a} style={{ background: '#f4f5f7', border: '1px solid #e8e8ec', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>👶 {a}J</span>
+                      ))}
+                      {creator?.kids_on_vid && (
+                        <span style={{ background: '#f4f5f7', border: '1px solid #e8e8ec', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>📷 zeigt Kinder</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* STATS */}
@@ -627,13 +674,13 @@ export default function CreatorPortal() {
             style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >✕</button>
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            {lightbox.mime_type?.startsWith('image/') ? (
-              <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8, objectFit: 'contain' }} />
-            ) : lightbox.file_type === 'video' ? (
-              <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8 }} />
-            ) : (
-              <div style={{ color: '#fff', fontSize: 48 }}>📄</div>
-            )}
+            {(() => {
+              const isVideo = lightbox.file_type === 'video' || lightbox.mime_type?.startsWith('video/')
+              const isImage = lightbox.file_type === 'image' || lightbox.mime_type?.startsWith('image/')
+              if (isImage) return <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8, objectFit: 'contain' }} />
+              if (isVideo) return <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8 }} />
+              return <div style={{ color: '#fff', fontSize: 48 }}>📄</div>
+            })()}
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{lightbox.file_name}</div>
               <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11, marginTop: 3 }}>
