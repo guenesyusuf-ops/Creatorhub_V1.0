@@ -1,4 +1,4 @@
-// v2.0 – Creator Portal (Neubau mit neuem Design + funktionierendem Upload)
+// v2.1 – Lightbox für Bild/Video, Google Drive öffnet neues Fenster, kein "Öffnen" Button
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -17,10 +17,6 @@ interface Upload {
   created_at: string
   seen_by_admin: boolean
   r2_key: string | null
-  // extra meta stored in file_name prefix or separate fields
-  batch?: string
-  product?: string
-  label?: string
 }
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
@@ -41,6 +37,7 @@ export default function CreatorPortal() {
   const [page, setPage] = useState<NavPage>('home')
   const [activeTab, setActiveTab] = useState<Tab>('bilder')
   const [toast, setToast] = useState('')
+  const [lightbox, setLightbox] = useState<Upload | null>(null)
 
   // Upload form state
   const [uCategory, setUCategory] = useState<Tab>('bilder')
@@ -58,7 +55,6 @@ export default function CreatorPortal() {
     if (!router.isReady) return
     const urlCode = router.query.code as string
     if (!urlCode) {
-      // Check existing session
       const saved = localStorage.getItem('creator_token')
       const savedCreator = localStorage.getItem('creator')
       if (saved && savedCreator) {
@@ -80,11 +76,7 @@ export default function CreatorPortal() {
         body: JSON.stringify({ code: c })
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Ungültiger Code')
-        setLoading(false)
-        return
-      }
+      if (!res.ok) { setError(data.error || 'Ungültiger Code'); setLoading(false); return }
       localStorage.setItem('creator_token', data.token)
       localStorage.setItem('creator', JSON.stringify(data.creator))
       setCreator(data.creator)
@@ -177,6 +169,16 @@ export default function CreatorPortal() {
     if (fileRef.current) fileRef.current.value = ''
     setUploadPct(0)
   }
+
+  function handleCardClick(u: Upload) {
+    if (u.file_type === 'link') {
+      window.open(u.file_url, '_blank')
+      return
+    }
+    setLightbox(u)
+  }
+
+  function closeLightbox() { setLightbox(null) }
 
   function showToast(msg: string) {
     setToast(msg)
@@ -313,13 +315,9 @@ export default function CreatorPortal() {
                 </div>
 
                 {/* CATEGORY TABS */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', marginBottom: 14, background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', marginBottom: 0, background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
                   {TABS.map(t => (
-                    <button
-                      key={t.key}
-                      className={`tab-btn${activeTab === t.key ? ' on' : ''}`}
-                      onClick={() => setActiveTab(t.key)}
-                    >
+                    <button key={t.key} className={`tab-btn${activeTab === t.key ? ' on' : ''}`} onClick={() => setActiveTab(t.key)}>
                       {t.icon} {t.label}
                       {uploads.filter(u => u.tab === t.key).length > 0 && (
                         <span style={{ marginLeft: 4, fontSize: 10, background: '#f0f0f3', borderRadius: 8, padding: '1px 5px', color: '#666' }}>
@@ -332,42 +330,38 @@ export default function CreatorPortal() {
 
                 {/* FILE GRID */}
                 {tabUploads.length === 0 ? (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center', color: '#aaa' }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>
-                      {TABS.find(t => t.key === activeTab)?.icon}
-                    </div>
+                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center', color: '#aaa' }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>{TABS.find(t => t.key === activeTab)?.icon}</div>
                     <div style={{ fontSize: 13, marginBottom: 12, color: '#888' }}>Noch keine Inhalte in dieser Kategorie</div>
-                    <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>
-                      + Hochladen
-                    </button>
+                    <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>+ Hochladen</button>
                   </div>
                 ) : (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: '0 0 8px 8px', padding: 14 }}>
+                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                       {tabUploads.map(u => (
-                        <div key={u.id} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden' }}>
-                          <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden' }}>
+                        <div
+                          key={u.id}
+                          onClick={() => handleCardClick(u)}
+                          style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}
+                        >
+                          <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
                             {u.mime_type?.startsWith('image/') && u.file_url
                               ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               : u.file_type === 'video' ? '🎬'
                               : u.file_type === 'link' ? '🔗'
                               : '📄'}
+                            {u.file_type === 'video' && (
+                              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
+                              </div>
+                            )}
                           </div>
                           <div style={{ padding: '8px 10px' }}>
                             <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
                             <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
-                            {u.file_url && u.file_type !== 'link' && (
-                              <a href={u.file_url} target="_blank" rel="noreferrer"
-                                style={{ display: 'inline-block', marginTop: 5, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 7px' }}>
-                                Öffnen ↗
-                              </a>
-                            )}
-                            {u.file_type === 'link' && u.file_url && (
-                              <a href={u.file_url} target="_blank" rel="noreferrer"
-                                style={{ display: 'inline-block', marginTop: 5, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 7px' }}>
-                                Link öffnen ↗
-                              </a>
-                            )}
+                            {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
                           </div>
                         </div>
                       ))}
@@ -388,7 +382,6 @@ export default function CreatorPortal() {
             {page === 'upload' && (
               <>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 16 }}>Inhalte hochladen</div>
-
                 <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 4 }}>Datei hochladen</div>
                   <div style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>
@@ -432,7 +425,7 @@ export default function CreatorPortal() {
 
                   {/* Dropzone */}
                   <div
-                    style={{ border: '1.5px dashed #e8e8ec', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14, transition: 'border-color .15s' }}
+                    style={{ border: '1.5px dashed #e8e8ec', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14 }}
                     onClick={() => fileRef.current?.click()}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUFile(f) }}
@@ -492,8 +485,14 @@ export default function CreatorPortal() {
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                         {uploads.filter(u => u.tab === uCategory).map(u => (
-                          <div key={u.id} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden' }}>
-                            <div style={{ height: 80, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                          <div
+                            key={u.id}
+                            onClick={() => handleCardClick(u)}
+                            style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
+                            onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
+                            onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}
+                          >
+                            <div style={{ height: 80, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                               {u.mime_type?.startsWith('image/') && u.file_url
                                 ? <img src={u.file_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : u.file_type === 'video' ? '🎬'
@@ -503,12 +502,7 @@ export default function CreatorPortal() {
                             <div style={{ padding: '7px 9px' }}>
                               <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
                               <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}</div>
-                              {u.file_url && (
-                                <a href={u.file_url} target="_blank" rel="noreferrer"
-                                  style={{ display: 'inline-block', marginTop: 4, fontSize: 10, color: '#4f6ef7', textDecoration: 'none', background: '#eff2ff', borderRadius: 4, padding: '2px 6px' }}>
-                                  Öffnen ↗
-                                </a>
-                              )}
+                              {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>↗ Link öffnen</div>}
                             </div>
                           </div>
                         ))}
@@ -541,7 +535,7 @@ export default function CreatorPortal() {
               </>
             )}
 
-            {/* ── SUB-PAGES (Briefings, Skripte, Lernvideos) ── */}
+            {/* ── SUB-PAGES ── */}
             {(page === 'briefings' || page === 'skripte' || page === 'lernvideos') && (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -566,11 +560,42 @@ export default function CreatorPortal() {
           {toast}
         </div>
       )}
+
+      {/* LIGHTBOX */}
+      {lightbox && (
+        <div
+          onClick={closeLightbox}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 9998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        >
+          <button
+            onClick={closeLightbox}
+            style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            {lightbox.mime_type?.startsWith('image/') ? (
+              <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8, objectFit: 'contain' }} />
+            ) : lightbox.file_type === 'video' ? (
+              <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8 }} />
+            ) : (
+              <div style={{ color: '#fff', fontSize: 48 }}>📄</div>
+            )}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{lightbox.file_name}</div>
+              <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11, marginTop: 3 }}>
+                {fmtDate(lightbox.created_at)}{lightbox.file_size ? ` · ${fmtSize(lightbox.file_size)}` : ''}
+              </div>
+            </div>
+            <a href={lightbox.file_url} download={lightbox.file_name}
+              style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', textDecoration: 'none' }}>
+              ⬇ Herunterladen
+            </a>
+          </div>
+        </div>
+      )}
     </>
   )
 }
 
-// ── STYLES ────────────────────────────────────────────────────────────────
 const css = `
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:system-ui,sans-serif;font-size:13px;color:#111;}
