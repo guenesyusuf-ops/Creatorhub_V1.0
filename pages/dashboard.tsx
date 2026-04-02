@@ -1076,7 +1076,7 @@ function rFiles(fld){
 el.querySelectorAll('[data-dl]').forEach(btn=>btn.addEventListener('click',(e)=>{
   e.stopPropagation();
   const url=btn.dataset.dlUrl,name=btn.dataset.dlName;
-  const a=document.createElement('a');a.href=url+'?download=1';a.download=name;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);
+  const a=document.createElement('a');a.href='/api/download?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(name);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
 }));
   el.querySelectorAll('[data-lb]').forEach(t=>t.addEventListener('click',()=>{
     if(S.bulkMode){
