@@ -866,7 +866,7 @@ function openC(id){
         let fld=c.flds[tab].find(f=>f.id==='__db_uploads__');
         if(!fld){fld={id:'__db_uploads__',name:'Uploads',batch:'Creator Upload',date:new Date().toISOString().slice(0,10),deadline:null,prods:[],tags:[],files:[]};c.flds[tab].unshift(fld);}
         if(!fld.files.find(f=>f.id===u.id)){
-          fld.files.push({id:u.id,name:u.file_name,type:u.file_type,url:u.file_url,size:u.file_size?(u.file_size/1024/1024).toFixed(1)+' MB':'',uploadedAt:null,comments:[],r2Key:u.r2_key});
+          fld.files.push({id:u.id,name:u.file_name,type:u.file_type||(u.mime_type||'').startsWith('image/')?'image':(u.mime_type||'').startsWith('video/')?'video':'file',url:u.file_url,size:u.file_size?(u.file_size/1024/1024).toFixed(1)+' MB':'',uploadedAt:null,comments:[],r2Key:u.r2_key,mime_type:u.mime_type,batch:u.batch,product:u.product,label:u.name});
           if(!u.seen_by_admin)newTabs.add(tab);
         }
       });
@@ -1967,7 +1967,7 @@ function portalOpenFld(fldWithTab){
         <div class="fi-thumb" data-pf="\${fi}">\${th}\${pov}</div>
         <div class="fi-info">
           <div class="fi-name">\${f.name}</div>
-          <div class="fi-meta">\${f.size||''}</div>
+          <div class="fi-meta">\${f.batch?'📦 '+f.batch+' · ':''}\${f.product?'🏷️ '+f.product+' · ':''}\${f.size||''}</div>
           \${upBadge}
           \${commBadge}
         </div>
