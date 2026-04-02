@@ -1116,8 +1116,16 @@ fetch('/api/comments?upload_id='+file.id,{headers:{'Authorization':'Bearer '+_to
   });
   G('lb').classList.add('open');
 }
-function rLbComments(comments){
-  G('lb-comments-list').innerHTML=comments.length?comments.map(c=>`<div class="lb-comment-item" style="background:${c.author_role==='admin'?'rgba(79,110,247,0.15)':'rgba(255,255,255,0.08)'};border-radius:6px;padding:6px 8px;margin-bottom:4px"><div style="font-size:9px;opacity:.6;margin-bottom:2px">${c.author_name} · ${new Date(c.created_at).toLocaleString('de-DE')}</div><div style="font-size:11px">${c.message}</div></div>`).join(''):'<div style="font-size:10px;color:#6b7280">Noch keine Kommentare</div>';
+function rLbComments(comments: any[]){
+  if(!comments.length){G('lb-comments-list').innerHTML='<div style="font-size:10px;color:#6b7280">Noch keine Kommentare</div>';return;}
+  G('lb-comments-list').innerHTML=comments.map(c=>{
+    const bg=c.author_role==='admin'?'rgba(79,110,247,0.15)':'rgba(255,255,255,0.08)';
+    const date=new Date(c.created_at).toLocaleString('de-DE');
+    return '<div class="lb-comment-item" style="background:'+bg+';border-radius:6px;padding:6px 8px;margin-bottom:4px">'
+      +'<div style="font-size:9px;opacity:.6;margin-bottom:2px">'+c.author_name+' · '+date+'</div>'
+      +'<div style="font-size:11px">'+c.message+'</div>'
+      +'</div>';
+  }).join('');
 }
 function closeLB(){G('lb').classList.remove('open');const v=G('lb-vid');v.pause();v.removeAttribute('src');}
 
