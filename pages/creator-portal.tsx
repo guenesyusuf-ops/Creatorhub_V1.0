@@ -136,7 +136,7 @@ export default function CreatorPortal() {
     if (uFile) fd.append('file', uFile)
     fd.append('creatorId', String(creator.id))
     fd.append('tab', uCategory)
-    if (uLabel.trim()) fd.append('linkName', uLabel.trim())
+    fd.append('linkName', uLabel.trim())  // → wird als file_name gespeichert
     if (uBatch.trim()) fd.append('batch', uBatch.trim())
     if (uProduct.trim()) fd.append('product', uProduct.trim())
     if (uLink.trim()) fd.append('linkUrl', uLink.trim())
@@ -360,6 +360,8 @@ export default function CreatorPortal() {
                           </div>
                           <div style={{ padding: '8px 10px' }}>
                             <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
+                            {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
+                            {(u as any).product && <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
                             <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
                             {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
                           </div>
@@ -585,10 +587,22 @@ export default function CreatorPortal() {
                 {fmtDate(lightbox.created_at)}{lightbox.file_size ? ` · ${fmtSize(lightbox.file_size)}` : ''}
               </div>
             </div>
-            <a href={lightbox.file_url} download={lightbox.file_name}
-              style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', textDecoration: 'none' }}>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(lightbox.file_url)
+                  const blob = await res.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = lightbox.file_name
+                  a.click()
+                  URL.revokeObjectURL(url)
+                } catch { window.open(lightbox.file_url, '_blank') }
+              }}
+              style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
               ⬇ Herunterladen
-            </a>
+            </button>
           </div>
         </div>
       )}
