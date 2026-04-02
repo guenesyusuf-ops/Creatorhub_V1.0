@@ -1084,7 +1084,7 @@ function rFiles(fld){
     }
     openLB(+t.dataset.lb,+t.dataset.lbFld);
   }));
-  el.querySelectorAll('[data-df]').forEach(btn=>btn.addEventListener('click',()=>delFile(+btn.dataset.df,+btn.dataset.dfl)));
+  el.querySelectorAll('[data-df]').forEach(btn=>btn.addEventListener('click',()=>delFile(btn.dataset.df,btn.dataset.dfl)));
   G('add-fi-btn')?.addEventListener('click',()=>openM('upload'));
 }
 
