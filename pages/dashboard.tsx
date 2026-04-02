@@ -1073,11 +1073,10 @@ function rFiles(fld){
       </div>
     </div>\`;
   }).join('')+\`<div class="add-fcard" style="min-height:110px" id="add-fi-btn"><div>+</div><span style="font-size:10px">Upload</span></div>\`;
-el.querySelectorAll('[data-dl]').forEach(btn=>btn.addEventListener('click',async(e)=>{
+el.querySelectorAll('[data-dl]').forEach(btn=>btn.addEventListener('click',(e)=>{
   e.stopPropagation();
   const url=btn.dataset.dlUrl,name=btn.dataset.dlName;
-  try{const r=await fetch(url);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
-  catch{window.open(url,'_blank');}
+  const a=document.createElement('a');a.href=url+'?download=1';a.download=name;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);
 }));
   el.querySelectorAll('[data-lb]').forEach(t=>t.addEventListener('click',()=>{
     if(S.bulkMode){
@@ -1101,7 +1100,7 @@ function openLB(fid,fldId){
   if(!file)return;
   S.activeLbFile=file;S.activeLbFld=fld;
   G('lb-name').textContent=file.name;G('lb-meta').textContent=\`\${file.size||''} · \${fld?.name||''}\`;
- G('lb-dl').onclick=async()=>{try{const r=await fetch(file.url);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=file.name;a.click();URL.revokeObjectURL(a.href);}catch{window.open(file.url,'_blank');}};
+G('lb-dl').onclick=()=>{const a=document.createElement('a');a.href=file.url+'?download=1';a.download=file.name;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);};
   const li=G('lb-img'),lv=G('lb-vid');
   if(file.type==='image'&&file.url){li.src=file.url;li.style.display='block';lv.style.display='none';}
   else if(file.type==='video'&&file.url){lv.src=file.url;lv.style.display='block';li.style.display='none';}
