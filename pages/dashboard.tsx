@@ -1106,26 +1106,12 @@ G('lb-dl').onclick=()=>{const a=document.createElement('a');a.href='/api/downloa
   else if(file.type==='video'&&file.url){lv.src=file.url;lv.style.display='block';li.style.display='none';}
   else{li.style.display='none';lv.style.display='none';}
   // Comments
- rLbComments([]);
-const _token=localStorage.getItem('token')||'';
-fetch('/api/comments?upload_id='+file.id,{headers:{'Authorization':'Bearer '+_token}})
-  .then(r=>r.json()).then(comments=>{
-    S.activeLbComments=comments||[];
-    rLbComments(S.activeLbComments);
-    fetch('/api/comments',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_token},body:JSON.stringify({upload_id:file.id,role:'admin'})});
-  });
+rLbComments(file);
   G('lb').classList.add('open');
 }
-function rLbComments(comments: any[]){
-  if(!comments.length){G('lb-comments-list').innerHTML='<div style="font-size:10px;color:#6b7280">Noch keine Kommentare</div>';return;}
-  G('lb-comments-list').innerHTML=comments.map(c=>{
-    const bg=c.author_role==='admin'?'rgba(79,110,247,0.15)':'rgba(255,255,255,0.08)';
-    const date=new Date(c.created_at).toLocaleString('de-DE');
-    return '<div class="lb-comment-item" style="background:'+bg+';border-radius:6px;padding:6px 8px;margin-bottom:4px">'
-      +'<div style="font-size:9px;opacity:.6;margin-bottom:2px">'+c.author_name+' · '+date+'</div>'
-      +'<div style="font-size:11px">'+c.message+'</div>'
-      +'</div>';
-  }).join('');
+function rLbComments(file){
+  const list=file.comments||[];
+  G('lb-comments-list').innerHTML=list.length?list.map(c=>`<div class="lb-comment-item">${c}</div>`).join(''):'<div style="font-size:10px;color:#6b7280">Noch keine Kommentare</div>';
 }
 function closeLB(){G('lb').classList.remove('open');const v=G('lb-vid');v.pause();v.removeAttribute('src');}
 
@@ -1153,16 +1139,15 @@ G('up-ok').addEventListener('click',()=>{
 G('up-cancel').addEventListener('click',()=>G('up-menu').classList.remove('open'));
 
 // COMMENT SEND
-G('lb-comment-send').addEventListener('click',async()=>{
+G('lb-comment-send').addEventListener('click',()=>{
   const txt=G('lb-comment-inp').value.trim();if(!txt)return;
   if(!S.activeLbFile)return;
-  const _token=localStorage.getItem('token')||'';
-  const res=await fetch('/api/comments',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_token},body:JSON.stringify({upload_id:S.activeLbFile.id,creator_id:S.activeLbFile.creator_id,author_role:'admin',author_name:'Admin',message:txt})});
-  if(!res.ok){showT('Fehler beim Senden');return;}
+  if(!S.activeLbFile.comments)S.activeLbFile.comments=[];
+  const now=new Date().toLocaleDateString('de-DE');
+  S.activeLbFile.comments.push(`✎\${txt} — Admin, \${now}\`);
   G('lb-comment-inp').value='';
-  const comments=await fetch('/api/comments?upload_id='+S.activeLbFile.id,{headers:{'Authorization':'Bearer '+_token}}).then(r=>r.json());
-  S.activeLbComments=comments||[];
-  rLbComments(S.activeLbComments);
+  rLbComments(S.activeLbFile);
+  if(S.activeLbFld)rFiles(S.activeLbFld);
   showT('Kommentar gespeichert ✓');
 });
 G('lb-comment-inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G('lb-comment-send').click();}});
