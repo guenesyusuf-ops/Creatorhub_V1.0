@@ -1063,18 +1063,22 @@ function rFiles(fld){
     const upTitle=f.uploadedAt?\`Hochgeladen: \${new Date(f.uploadedAt).toLocaleDateString('de-DE')}\`:'Als hochgeladen markieren';
     return\`<div class="ficard\${isSel?' selected':''}" data-fcid="\${f.id}">
       <div class="fi-thumb" data-lb="\${f.id}" data-lb-fld="\${fld.id}">\${th}\${pov}\${cbHtml}\${commBadge}</div>
-      <div class="fi-info">
-        <div class="fi-name" title="\${f.name}">\${f.name}</div>
-      <div class="fi-meta">\${f.name&&f.name!==f.file_name?f.name+' · ':''}\${f.batch?'📦 '+f.batch+' · ':''}\${f.product?'🏷️ '+f.product+' · ':''}\${f.size||''}</div>
-        <div class="fi-acts">
-          <a class="fi-btn" href="\${f.url||'#'}" download="\${f.name}">⬇</a>
+<div class="fi-info">
+      <div class="fi-name" title="\${f.name}">\${f.name}</div>
+      <div class="fi-meta">\${f.batch?'<div>📦 '+f.batch+'</div>':''}\${f.product?'<div>🏷️ '+f.product+'</div>':''}\${f.size?'<div>'+f.size+'</div>':''}<div style="color:#aaa;font-size:9px">\${new Date(f.uploadedAt||Date.now()).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})}</div></div>
+         <button class="fi-btn" data-dl="\${f.id}" data-dl-url="\${f.url}" data-dl-name="\${f.name}">⬇</button>
           <button class="fi-btn \${upClass}" data-up="\${f.id}" data-ufl="\${fld.id}" title="\${upTitle}">\${f.uploadedAt?'✓':'○'}</button>
           <button class="fi-btn del" data-df="\${f.id}" data-dfl="\${fld.id}">🗑</button>
         </div>
       </div>
     </div>\`;
   }).join('')+\`<div class="add-fcard" style="min-height:110px" id="add-fi-btn"><div>+</div><span style="font-size:10px">Upload</span></div>\`;
-
+el.querySelectorAll('[data-dl]').forEach(btn=>btn.addEventListener('click',async(e)=>{
+  e.stopPropagation();
+  const url=btn.dataset.dlUrl,name=btn.dataset.dlName;
+  try{const r=await fetch(url);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+  catch{window.open(url,'_blank');}
+}));
   el.querySelectorAll('[data-lb]').forEach(t=>t.addEventListener('click',()=>{
     if(S.bulkMode){
       const fid=+t.dataset.lb;
