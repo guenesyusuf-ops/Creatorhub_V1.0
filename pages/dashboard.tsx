@@ -1100,7 +1100,7 @@ function openLB(fid,fldId){
   if(!file)return;
   S.activeLbFile=file;S.activeLbFld=fld;
   G('lb-name').textContent=file.name;G('lb-meta').textContent=\`\${file.size||''} · \${fld?.name||''}\`;
-G('lb-dl').onclick=()=>{const a=document.createElement('a');a.href=file.url+'?download=1';a.download=file.name;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);};
+G('lb-dl').onclick=()=>{const a=document.createElement('a');a.href='/api/download?url='+encodeURIComponent(file.url)+'&name='+encodeURIComponent(file.name);a.download=file.name;document.body.appendChild(a);a.click();document.body.removeChild(a);};
   const li=G('lb-img'),lv=G('lb-vid');
   if(file.type==='image'&&file.url){li.src=file.url;li.style.display='block';lv.style.display='none';}
   else if(file.type==='video'&&file.url){lv.src=file.url;lv.style.display='block';li.style.display='none';}
