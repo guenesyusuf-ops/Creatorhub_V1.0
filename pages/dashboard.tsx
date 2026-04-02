@@ -1076,7 +1076,7 @@ function rFiles(fld){
 el.querySelectorAll('[data-dl]').forEach(btn=>btn.addEventListener('click',(e)=>{
   e.stopPropagation();
   const url=btn.dataset.dlUrl,name=btn.dataset.dlName;
-  const a=document.createElement('a');a.href='/api/download?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(name);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  const a=document.createElement('a');a.href=url+'?download=1';a.download=name;a.target='_blank';document.body.appendChild(a);a.click();document.body.removeChild(a);
 }));
   el.querySelectorAll('[data-lb]').forEach(t=>t.addEventListener('click',()=>{
     if(S.bulkMode){
@@ -1106,12 +1106,12 @@ G('lb-dl').onclick=()=>{const a=document.createElement('a');a.href='/api/downloa
   else if(file.type==='video'&&file.url){lv.src=file.url;lv.style.display='block';li.style.display='none';}
   else{li.style.display='none';lv.style.display='none';}
   // Comments
-rLbComments(file);
+  rLbComments(file);
   G('lb').classList.add('open');
 }
 function rLbComments(file){
   const list=file.comments||[];
-  G('lb-comments-list').innerHTML=list.length?list.map(c=>`<div class="lb-comment-item">${c}</div>`).join(''):'<div style="font-size:10px;color:#6b7280">Noch keine Kommentare</div>';
+  G('lb-comments-list').innerHTML=list.length?list.map(c=>\`<div class="lb-comment-item">\${c}</div>\`).join(''):'<div style="font-size:10px;color:#666;text-align:center">Noch keine Kommentare</div>';
 }
 function closeLB(){G('lb').classList.remove('open');const v=G('lb-vid');v.pause();v.removeAttribute('src');}
 
@@ -1144,7 +1144,7 @@ G('lb-comment-send').addEventListener('click',()=>{
   if(!S.activeLbFile)return;
   if(!S.activeLbFile.comments)S.activeLbFile.comments=[];
   const now=new Date().toLocaleDateString('de-DE');
-  S.activeLbFile.comments.push(`✎\${txt} — Admin, \${now}\`);
+  S.activeLbFile.comments.push(\`\${txt} – Admin, \${now}\`);
   G('lb-comment-inp').value='';
   rLbComments(S.activeLbFile);
   if(S.activeLbFld)rFiles(S.activeLbFld);
