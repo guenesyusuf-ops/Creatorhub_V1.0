@@ -565,7 +565,7 @@ const HTML = `
     <div style="font-size:10px;opacity:.6" id="lb-meta"></div>
   </div>
   <div style="display:flex;gap:7px;margin-top:9px">
-    <a id="lb-dl" class="lb-btn" download>⬇ Download</a>
+   <button id="lb-dl" class="lb-btn" style="cursor:pointer;font-family:inherit">⬇ Download</button>
     <button class="lb-btn" id="lb-close">✕ Schließen</button>
   </div>
   <!-- KOMMENTARE -->
@@ -1101,7 +1101,7 @@ function openLB(fid,fldId){
   if(!file)return;
   S.activeLbFile=file;S.activeLbFld=fld;
   G('lb-name').textContent=file.name;G('lb-meta').textContent=\`\${file.size||''} · \${fld?.name||''}\`;
-  G('lb-dl').href=file.url||'#';G('lb-dl').download=file.name;
+ G('lb-dl').onclick=async()=>{try{const r=await fetch(file.url);const b=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=file.name;a.click();URL.revokeObjectURL(a.href);}catch{window.open(file.url,'_blank');}};
   const li=G('lb-img'),lv=G('lb-vid');
   if(file.type==='image'&&file.url){li.src=file.url;li.style.display='block';lv.style.display='none';}
   else if(file.type==='video'&&file.url){lv.src=file.url;lv.style.display='block';li.style.display='none';}
