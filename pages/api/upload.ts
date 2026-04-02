@@ -1,24 +1,14 @@
+// v2.0 – Unterstützt drei Upload-Modi:
+// 1. Datei-Upload (direkt durch Vercel, für kleine Dateien)
+// 2. Presigned URL Flow (Datei bereits in R2, nur Supabase-Eintrag)
+// 3. Link-Upload (Google Drive o.ä.)
+
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { supabase } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
 import formidable from 'formidable'
-import fs from 'fs'
-import path from 'path'
 
 export const config = { api: { bodyParser: false } }
-
-const R2 = new S3Client({
-  region: 'auto',
-  endpoint: `https://f1722b37e4364e5ab611384fce036e3f.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-})
-
-const BUCKET = 'creatorhub-media'
-const PUBLIC_URL = process.env.R2_PUBLIC_URL || `https://f1722b37e4364e5ab611384fce036e3f.r2.cloudflarestorage.com`
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -26,98 +16,131 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const auth = req.headers.authorization?.split(' ')[1]
   if (!auth) return res.status(401).json({ error: 'Unauthorized' })
 
-  let decoded: any
-  try { decoded = jwt.verify(auth, process.env.JWT_SECRET!) } catch {
+  try { jwt.verify(auth, process.env.JWT_SECRET!) } catch {
     return res.status(401).json({ error: 'Invalid token' })
   }
 
   const form = formidable({ maxFileSize: 500 * 1024 * 1024 })
 
   form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: 'Upload error: ' + err.message })
+    if (err) return res.status(500).json({ error: 'Parse error: ' + err.message })
+
+    const get = (f: any) => Array.isArray(f) ? f[0] : f
+
+    const creatorId  = get(fields.creatorId)
+    const tab        = get(fields.tab) || 'bilder'
+    const name       = get(fields.name) || get(fields.linkName) || 'Datei'
+    const batch      = get(fields.batch) || null
+    const product    = get(fields.product) || null
+    const linkUrl    = get(fields.linkUrl) || null
+    const publicUrl  = get(fields.publicUrl) || null
+    const r2Key      = get(fields.r2Key) || null
+    const fileSize   = get(fields.fileSize) ? parseInt(get(fields.fileSize)) : null
+    const mimeType   = get(fields.mimeType) || null
+
+    if (!creatorId) return res.status(400).json({ error: 'creatorId fehlt' })
 
     const file = Array.isArray(files.file) ? files.file[0] : files.file
+
+    // ── Modus bestimmen ────────────────────────────────────────────────────
+    // Modus A: Presigned URL Flow – Datei ist bereits in R2
+    if (publicUrl && r2Key && !file) {
+      try {
+        const { data: uploadRecord, error: uploadError } = await supabase
+          .from('uploads')
+          .insert({
+            creator_id: creatorId,
+            name,
+            batch,
+            product,
+            category: tab,
+            tab,
+            file_url: publicUrl,
+            file_key: r2Key,
+            r2_key: r2Key,
+            file_name: name,
+            file_size: fileSize,
+            mime_type: mimeType,
+            seen_by_admin: false,
+          })
+          .select()
+          .single()
+
+        if (uploadError) {
+          console.error('DB upload error:', JSON.stringify(uploadError))
+          return res.status(500).json({ error: uploadError.message })
+        }
+
+        await saveNotification(creatorId, name, tab, uploadRecord?.id)
+
+        return res.status(200).json({ success: true, upload: uploadRecord })
+      } catch (e: any) {
+        return res.status(500).json({ error: e.message })
+      }
+    }
+
+    // ── Modus B: Link-Upload (Google Drive etc.) ───────────────────────────
+    if (linkUrl && !file) {
+      try {
+        const { data: uploadRecord, error: uploadError } = await supabase
+          .from('uploads')
+          .insert({
+            creator_id: creatorId,
+            name,
+            batch,
+            product,
+            category: tab,
+            tab,
+            file_url: linkUrl,
+            file_type: 'link',
+            file_name: name,
+            seen_by_admin: false,
+          })
+          .select()
+          .single()
+
+        if (uploadError) {
+          console.error('DB upload error:', JSON.stringify(uploadError))
+          return res.status(500).json({ error: uploadError.message })
+        }
+
+        await saveNotification(creatorId, name, tab, uploadRecord?.id)
+
+        return res.status(200).json({ success: true, upload: uploadRecord })
+      } catch (e: any) {
+        return res.status(500).json({ error: e.message })
+      }
+    }
+
+    // ── Modus C: Direkter Datei-Upload durch Vercel (kleine Dateien) ───────
     if (!file) return res.status(400).json({ error: 'No file provided' })
 
-    const creatorId = Array.isArray(fields.creatorId) ? fields.creatorId[0] : fields.creatorId
-    const category = Array.isArray(fields.tab) ? fields.tab[0] : fields.tab || 'bilder'
-    const name = Array.isArray(fields.name) ? fields.name[0] : fields.name || file.originalFilename || 'Datei'
-    const batch = Array.isArray(fields.batch) ? fields.batch[0] : fields.batch || ''
-    const product = Array.isArray(fields.product) ? fields.product[0] : fields.product || ''
-
-    const safeName = (file.originalFilename || 'file').replace(/[^a-zA-Z0-9._-]/g, '_')
-    const key = `creators/${creatorId}/${category}/${Date.now()}_${safeName}`
-
-    try {
-      const fileBuffer = fs.readFileSync(file.filepath)
-
-      await R2.send(new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: key,
-        Body: fileBuffer,
-        ContentType: file.mimetype || 'application/octet-stream',
-        ContentLength: file.size,
-      }))
-
-      fs.unlinkSync(file.filepath)
-
-      const fileUrl = `${PUBLIC_URL}/${key}`
-
-      // Save to uploads table
-      const { data: uploadRecord, error: uploadError } = await supabase
-        .from('uploads')
-        .insert({
-          creator_id: creatorId,
-          name,
-          batch: batch || null,
-          product: product || null,
-          category,
-          file_url: fileUrl,
-          file_key: key,
-          file_name: file.originalFilename,
-          file_size: file.size,
-          mime_type: file.mimetype,
-        })
-        .select()
-        .single()
-
-      if (uploadError) {
-        console.error('DB upload error:', uploadError)
-      }
-
-      // Get creator name for notification
-      const { data: creator } = await supabase
-        .from('creators')
-        .select('name')
-        .eq('id', creatorId)
-        .single()
-
-      const creatorName = creator?.name || 'Ein Creator'
-      const categoryLabels: any = { bilder: 'Bilder', videos: 'Video', roh: 'Rohmaterial', auswertung: 'Auswertung' }
-      const catLabel = categoryLabels[category] || category
-
-      // Create notification
-      await supabase.from('notifications').insert({
-        type: 'upload',
-        creator_id: creatorId,
-        creator_name: creatorName,
-        message: `${creatorName} hat ${catLabel} hochgeladen: "${name}"`,
-        upload_id: uploadRecord?.id || null,
-        dismissed: false,
-      })
-
-      return res.status(200).json({
-        success: true,
-        key,
-        url: fileUrl,
-        fileName: file.originalFilename,
-        fileSize: file.size,
-        mimeType: file.mimetype,
-        uploadId: uploadRecord?.id,
-      })
-    } catch (uploadErr: any) {
-      console.error('R2 upload error:', uploadErr)
-      return res.status(500).json({ error: 'R2 upload failed: ' + uploadErr.message })
-    }
+    // Dieser Modus bleibt für kleine Dateien als Fallback
+    return res.status(400).json({ error: 'Direkter Datei-Upload nicht mehr unterstützt. Bitte Presigned URL verwenden.' })
   })
+}
+
+async function saveNotification(creatorId: string, name: string, tab: string, uploadId: string | null) {
+  try {
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('name')
+      .eq('id', creatorId)
+      .single()
+
+    const creatorName = creator?.name || 'Ein Creator'
+    const categoryLabels: any = { bilder: 'Bilder', videos: 'Video', roh: 'Rohmaterial', auswertung: 'Auswertung' }
+    const catLabel = categoryLabels[tab] || tab
+
+    await supabase.from('notifications').insert({
+      type: 'upload',
+      creator_id: creatorId,
+      creator_name: creatorName,
+      message: `${creatorName} hat ${catLabel} hochgeladen: "${name}"`,
+      upload_id: uploadId,
+      dismissed: false,
+    })
+  } catch (e) {
+    console.warn('Notification error (non-fatal):', e)
+  }
 }
