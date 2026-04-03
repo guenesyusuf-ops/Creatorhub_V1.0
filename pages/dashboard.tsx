@@ -915,7 +915,7 @@ function lastUploadDays(c){
 }
 
 function rDash(){
-  const tf=S.creators.reduce((s,c)=>s+Object.values(c.flds).flat().reduce((ss,f)=>ss+f.files.length,0),0);
+  const tf=S.allUploads.length;
   const crWithUpload=S.creators.filter(c=>S.allUploads.some(u=>String(u.creator_id)===String(c.id))).length;
 
   // ── HERO CARD
@@ -991,10 +991,11 @@ function rDash(){
       var av=c.photo
         ?'<img src="'+c.photo+'" style="width:32px;height:32px;border-radius:8px;object-fit:cover">'
         :'<div style="width:32px;height:32px;border-radius:8px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">'+c.ini+'</div>';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
+      return '<div class="no-up-row" data-cid="'+c.id+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);cursor:pointer;border-radius:8px;transition:background .12s">'
         +av
-        +'<div><div style="font-size:13px;font-weight:600;color:#1a1a2e">'+c.name+'</div>'
-        +'<div style="font-size:10px;color:var(--muted)">'+(c.email||'Kein Upload')+'</div></div>'
+        +'<div><div style="font-size:13px;font-weight:600;color:#4f6ef7">'+c.name+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">'+(c.email||'Noch kein Upload')+'</div></div>'
+        +'<span style="margin-left:auto;font-size:11px;color:var(--muted)">→</span>'
         +'</div>';
     }).join('');
     var modal=document.createElement('div');
@@ -1009,6 +1010,15 @@ function rDash(){
     document.body.appendChild(modal);
     modal.querySelector('#no-up-close').addEventListener('click',function(){modal.remove();});
     modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+    modal.querySelectorAll('.no-up-row').forEach(function(row){
+      row.addEventListener('click',function(){
+        modal.remove();
+        go('creators');
+        setTimeout(function(){openC(row.dataset.cid);},80);
+      });
+      row.addEventListener('mouseover',function(){row.style.background='var(--lt)';});
+      row.addEventListener('mouseout',function(){row.style.background='';});
+    });
   });
 
   // ── LATE CONTENT WARNING
