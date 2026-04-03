@@ -329,7 +329,7 @@ body.dark .search-inp{color:#e8e8ff;}
 @media(max-width:900px){.menu-toggle{display:flex;align-items:center;}}
 .ch-card{transition:all .18s;}
 .ch-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
-`
+`;
 
 const HTML = `
 <div class="sb-overlay" id="sb-overlay"></div>
@@ -713,8 +713,7 @@ const HTML = `
 </div>
 
 <div class="toast" id="toast"></div>
-`
-`
+`;
 
 const JS = `
 const G=id=>document.getElementById(id);
@@ -1944,7 +1943,7 @@ window.rKat=rKat;window.rCT=rCT;window.rCHdr=rCHdr;
 window.rRightSidebar=rRightSidebar;
 
 go('dashboard');rFP();
-`
+`;
 
 export default function DashboardPage() {
   const router = useRouter()
