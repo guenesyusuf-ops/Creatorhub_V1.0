@@ -1249,19 +1249,19 @@ function rCT(tab){
     } else {
       vertragListHtml='<div style="font-size:12px;color:var(--muted);padding:8px 0">Noch keine Verträge hochgeladen</div>';
     }
-    G('c-tc').innerHTML=`
+    G('c-tc').innerHTML=\`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div style="display:flex;flex-direction:column;gap:14px">
           <div class="sc" style="padding:16px">
             <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔒 Interne Notizen</div>
-            <textarea class="fi" id="notiz-inp" rows="4" placeholder="Interne Anmerkungen..." style="resize:vertical">${c.notizen||''}</textarea>
+            <textarea class="fi" id="notiz-inp" rows="4" placeholder="Interne Anmerkungen..." style="resize:vertical">\${c.notizen||''}</textarea>
             <div style="font-size:13px;font-weight:600;margin-top:14px;margin-bottom:4px">💬 Hinweis für Creator</div>
-            <textarea class="fi" id="notiz-creator-inp" rows="4" placeholder="z.B. Bitte immer Story-Format verwenden." style="resize:vertical">${c.notizenCreator||''}</textarea>
+            <textarea class="fi" id="notiz-creator-inp" rows="4" placeholder="z.B. Bitte immer Story-Format verwenden." style="resize:vertical">\${c.notizenCreator||''}</textarea>
             <button class="btn btn-p" style="width:100%;margin-top:8px" id="notiz-save">Notizen speichern</button>
           </div>
           <div class="sc" style="padding:16px">
             <div style="font-size:13px;font-weight:600;margin-bottom:12px">📄 Verträge</div>
-            <div id="vertrag-list">${vertragListHtml}</div>
+            <div id="vertrag-list">\${vertragListHtml}</div>
             <label style="display:block;margin-top:12px;cursor:pointer">
               <div class="btn btn-p" style="width:100%;justify-content:center;font-size:12px;margin-top:4px">+ Vertrag hochladen (PDF)</div>
               <input type="file" accept="application/pdf" id="vertrag-inp" style="display:none" multiple>
@@ -1273,16 +1273,16 @@ function rCT(tab){
           <div style="font-size:13px;font-weight:600;margin-bottom:4px">💶 Vergütungsmodell</div>
           <div class="fg"><label class="fl">Modell</label>
             <select class="fi" id="verg-model">
-              <option value="provision" ${c.verguetung==='provision'?'selected':''}>Provision (%)</option>
-              <option value="fix" ${c.verguetung==='fix'?'selected':''}>Fixbetrag (€)</option>
-              <option value="beides" ${c.verguetung==='beides'?'selected':''}>Beides</option>
+              <option value="provision" \${c.verguetung==='provision'?'selected':''}>Provision (%)</option>
+              <option value="fix" \${c.verguetung==='fix'?'selected':''}>Fixbetrag (€)</option>
+              <option value="beides" \${c.verguetung==='beides'?'selected':''}>Beides</option>
             </select>
           </div>
-          <div class="fg" id="verg-prov-wrap"><label class="fl">Provision %</label><input class="fi" id="verg-prov" type="number" value="${c.provision||''}"></div>
-          <div class="fg" id="verg-fix-wrap"><label class="fl">Fixbetrag €</label><input class="fi" id="verg-fix" type="number" value="${c.fixbetrag||''}"></div>
+          <div class="fg" id="verg-prov-wrap"><label class="fl">Provision %</label><input class="fi" id="verg-prov" type="number" value="\${c.provision||''}"></div>
+          <div class="fg" id="verg-fix-wrap"><label class="fl">Fixbetrag €</label><input class="fi" id="verg-fix" type="number" value="\${c.fixbetrag||''}"></div>
           <button class="btn btn-p" style="width:100%" id="verg-save">Vergütung speichern</button>
         </div>
-      </div>`;
+      </div>\`;
     G('notiz-save').addEventListener('click',()=>{c.notizen=G('notiz-inp').value;c.notizenCreator=G('notiz-creator-inp').value;showT('Notizen gespeichert ✓');});
     G('verg-save').addEventListener('click',()=>{c.verguetung=G('verg-model').value;c.provision=G('verg-prov')?.value||'';c.fixbetrag=G('verg-fix')?.value||'';rCHdr();showT('Vergütung gespeichert ✓');});
     // Vertrags-Upload
