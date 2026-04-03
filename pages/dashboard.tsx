@@ -600,16 +600,27 @@ const HTML = `
 
 <!-- CONTENT HUB PAGE -->
 <div class="pg" id="pg-content-hub">
-  <div class="ph">
-    <div class="ph-t">Content Hub</div>
-    <div style="display:flex;gap:8px">
-      <input class="fi" id="ch-search" placeholder="🔍 Suchen..." style="width:180px;padding:7px 12px;font-size:12px">
-      <button class="btn btn-p" id="ch-add-btn">+ Inhalt hinzufügen</button>
+  <!-- Kategorie-Übersicht -->
+  <div id="ch-overview">
+    <div class="ph">
+      <div class="ph-t">Content Hub</div>
       <button class="btn" id="ch-add-cat-btn">+ Kategorie</button>
     </div>
+    <div id="ch-cat-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px"></div>
   </div>
-  <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap" id="ch-cats"></div>
-  <div id="ch-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
+  <!-- Kategorie-Detail -->
+  <div id="ch-detail" style="display:none">
+    <div class="ph">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="bk" id="ch-bk">← Zurück</button>
+        <div class="ph-t" id="ch-detail-title"></div>
+      </div>
+      <button class="btn btn-p" id="ch-add-item-btn">+ Inhalt hinzufügen</button>
+    </div>
+    <div id="ch-item-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px"></div>
+  </div>
+  <!-- Hidden file input -->
+  <input type="file" id="ch-file-inp" style="display:none" accept="image/*,video/*,application/pdf" multiple>
 </div>
 
 <!-- EINSTELLUNGEN PAGE -->
@@ -1307,7 +1318,7 @@ function rCT(tab){
               <div class="btn btn-p" style="width:100%;justify-content:center;font-size:12px;margin-top:4px">+ Vertrag hochladen (PDF)</div>
               <input type="file" accept="application/pdf" id="vertrag-inp" style="display:none" multiple>
             </label>
-            <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Nur PDF · Max. 10 MB pro Datei</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Nur PDF · Max. 500 MB pro Datei</div>
           </div>
         </div>
         <div class="sc" style="padding:16px">
@@ -1332,7 +1343,7 @@ function rCT(tab){
       var files=Array.from(this.files);
       files.forEach(function(file){
         if(file.type!=='application/pdf'){showT('Nur PDF erlaubt');return;}
-        if(file.size>10*1024*1024){showT(file.name+' ist zu groß (max 10 MB)');return;}
+        if(file.size>500*1024*1024){showT(file.name+' ist zu groß (max 10 MB)');return;}
         var token=localStorage.getItem('token')||'';
         showT('⏳ '+file.name+' wird hochgeladen...');
         fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
@@ -2369,12 +2380,76 @@ function confirmM(){
 }
 
 function rContentHub(){
-  const hub=S.contentHub;
-  G('ch-cats').innerHTML=['Alle',...hub.cats].map(c=>\`<button class="fp-chip\${S.chFilter===c?' sel':''}" data-chcat="\${c}">\${c}</button>\`).join('');
-  G('ch-cats').querySelectorAll('[data-chcat]').forEach(btn=>btn.addEventListener('click',()=>{S.chFilter=btn.dataset.chcat;rContentHub();}));
-  const items=hub.items.filter(x=>S.chFilter==='Alle'||x.cat===S.chFilter);
-  G('ch-grid').innerHTML=items.length?items.map(item=>\`<div class="sc ch-card" style="padding:18px"><div style="font-size:14px;font-weight:600;margin-bottom:5px">\${item.title}</div><div style="font-size:12px;color:var(--muted)">\${item.desc||''}</div></div>\`).join(''):'<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Noch keine Inhalte</div>';
-  G('ch-search').oninput=()=>rContentHub();
+  var hub=S.contentHub;
+  // Kategorie-Übersicht
+  G('ch-overview').style.display='block';
+  G('ch-detail').style.display='none';
+  var catGrid=G('ch-cat-grid');
+  if(!catGrid)return;
+  catGrid.innerHTML=hub.cats.map(function(cat){
+    var items=hub.items.filter(function(x){return x.cat===cat;});
+    var preview='';
+    if(items.length){
+      var first=items[0];
+      if(first.type==='image'&&first.url)preview='<img src="'+first.url+'" style="width:100%;height:90px;object-fit:cover;border-radius:10px;margin-bottom:10px">';
+      else if(first.type==='video'&&first.url)preview='<video src="'+first.url+'" style="width:100%;height:90px;object-fit:cover;border-radius:10px;margin-bottom:10px" muted></video>';
+      else if(first.type==='pdf')preview='<div style="width:100%;height:90px;background:#f0f4ff;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:28px">📄</div>';
+    } else {
+      preview='<div style="width:100%;height:90px;background:var(--lt);border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted)">📁</div>';
+    }
+    return '<div class="sc ch-card" data-cat="'+cat+'" style="padding:14px;cursor:pointer">'
+      +preview
+      +'<div style="font-size:13px;font-weight:700;color:#1a1a2e">'+cat+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+items.length+' Inhalt'+(items.length!==1?'e':'')+'</div>'
+      +'</div>';
+  }).join('');
+  if(!hub.cats.length){
+    catGrid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:13px">Noch keine Kategorien – klicke auf "+ Kategorie"</div>';
+  }
+  catGrid.querySelectorAll('[data-cat]').forEach(function(card){
+    card.addEventListener('click',function(){rCHDetail(card.dataset.cat);});
+  });
+}
+
+function rCHDetail(cat){
+  var hub=S.contentHub;
+  G('ch-overview').style.display='none';
+  G('ch-detail').style.display='block';
+  G('ch-detail-title').textContent=cat;
+  S.chFilter=cat;
+  var items=hub.items.filter(function(x){return x.cat===cat;});
+  var grid=G('ch-item-grid');
+  grid.innerHTML=items.map(function(item,i){
+    var preview='';
+    if(item.type==='image'&&item.url)
+      preview='<img src="'+item.url+'" style="width:100%;height:110px;object-fit:cover;border-radius:10px;margin-bottom:8px">';
+    else if(item.type==='video'&&item.url)
+      preview='<video src="'+item.url+'" controls style="width:100%;height:110px;object-fit:cover;border-radius:10px;margin-bottom:8px"></video>';
+    else if(item.type==='pdf')
+      preview='<div style="width:100%;height:110px;background:#f0f4ff;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:36px">📄</div>';
+    return '<div class="sc" style="padding:14px;position:relative">'
+      +preview
+      +'<div style="font-size:12px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+item.title+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+item.date+'</div>'
+      +(item.url&&item.type==='pdf'?'<a href="'+item.url+'" target="_blank" style="font-size:10px;color:var(--blue);font-weight:600;text-decoration:none;display:block;margin-top:4px">↓ Öffnen</a>':'')
+      +'<button data-del-ch="'+i+'" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted)" title="Löschen">✕</button>'
+      +'</div>';
+  }).join('');
+  if(!items.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:13px">Noch keine Inhalte – klicke auf "+ Inhalt hinzufügen"</div>';
+  }
+  grid.querySelectorAll('[data-del-ch]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var idx=parseInt(btn.dataset.delCh);
+      var allItems=hub.items;
+      var catItems=allItems.filter(function(x){return x.cat===cat;});
+      var toRemove=catItems[idx];
+      hub.items=allItems.filter(function(x){return x!==toRemove;});
+      saveAppData('contentHub',hub);
+      rCHDetail(cat);
+    });
+  });
 }
 
 function uBdg(){G('bdg-c').textContent=S.creators.length;G('bdg-p').textContent=S.projekte.length;}
@@ -2465,7 +2540,54 @@ G('ci-send').addEventListener('click',async()=>{
   }catch(e){showT('Netzwerkfehler');}
 });
 G('ch-add-btn')?.addEventListener('click',()=>{showT('Content Hub: Funktion in Entwicklung');});
-G('ch-add-cat-btn')?.addEventListener('click',()=>{const name=prompt('Neue Kategorie:');if(name&&name.trim()){S.contentHub.cats.push(name.trim());rContentHub();showT('Kategorie hinzugefügt ✓');}});
+G('ch-add-cat-btn')?.addEventListener('click',function(){
+  var name=prompt('Name der neuen Kategorie:');
+  if(name&&name.trim()){
+    S.contentHub.cats.push(name.trim());
+    saveAppData('contentHub',S.contentHub);
+    rContentHub();
+    showT('Kategorie "'+name.trim()+'" hinzugefügt ✓');
+  }
+});
+G('ch-bk')?.addEventListener('click',function(){rContentHub();});
+G('ch-add-item-btn')?.addEventListener('click',function(){G('ch-file-inp').click();});
+G('ch-file-inp')?.addEventListener('change',function(){
+  var files=Array.from(this.files);
+  var cat=S.chFilter;
+  if(!cat){showT('Bitte zuerst eine Kategorie öffnen');return;}
+  var token=localStorage.getItem('token')||'';
+  var uploaded=0;
+  files.forEach(function(file){
+    var isImg=file.type.startsWith('image/');
+    var isVid=file.type.startsWith('video/');
+    var isPdf=file.type==='application/pdf';
+    if(!isImg&&!isVid&&!isPdf){showT('Nur Bilder, Videos und PDFs erlaubt');return;}
+    if(file.size>500*1024*1024){showT(file.name+' ist zu groß (max 500 MB)');return;}
+    showT('⏳ '+file.name+' wird hochgeladen...');
+    fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({fileName:file.name,fileType:file.type,creatorId:'content-hub',tab:'content-hub'})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d.signedUrl){showT('Upload-Fehler');return;}
+        return fetch(d.signedUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file})
+          .then(function(){
+            var entry={
+              title:file.name.replace(/\.[^.]+$/,''),
+              url:d.publicUrl,
+              type:isImg?'image':isVid?'video':'pdf',
+              cat:cat,
+              date:new Date().toLocaleDateString('de-DE')
+            };
+            S.contentHub.items.push(entry);
+            saveAppData('contentHub',S.contentHub);
+            uploaded++;
+            rCHDetail(cat);
+            showT('✓ '+file.name+' hochgeladen');
+          });
+      }).catch(function(){showT('Fehler beim Upload von '+file.name);});
+  });
+  this.value='';
+});
 G('logout-btn')?.addEventListener('click',()=>{if(confirm('Wirklich abmelden?')){localStorage.removeItem('token');localStorage.removeItem('user');window.location.href='/login';}});
 G('portal-logout-btn')?.addEventListener('click',()=>{localStorage.removeItem('creator_token');G('creator-portal').classList.remove('open');});
 document.addEventListener('click',e=>{if(!e.target.closest('#drop-menu')&&!e.target.closest('.dot-btn'))hideDot();if(!e.target.closest('#fp-panel')&&!e.target.closest('#fp-btn'))G('fp-panel').classList.remove('open');});
