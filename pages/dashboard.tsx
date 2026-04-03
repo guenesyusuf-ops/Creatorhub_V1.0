@@ -1497,19 +1497,67 @@ function delK(id,name){askConfirm(\`"\${name}" löschen?\`,()=>{S.kat=S.kat.filt
 
 function rTeam(){
   G('t-tot').textContent=S.team.length;
-  G('t-adm').textContent=S.team.filter(m=>m.role==='admin').length;
-  G('t-pen').textContent=S.team.filter(m=>m.status==='pending').length;
-  G('t-rows').innerHTML=S.team.map(m=>{
-    const av=m.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const re=m.you?\`<span style="font-size:10px;color:var(--muted)">Du</span>\`:\`<select style="background:var(--lt);border:1px solid var(--bdr);border-radius:5px;padding:2px 6px;font-size:11px;outline:none;font-family:inherit" data-ri="\${m.id}"><option value="admin" \${m.role==='admin'?'selected':''}>Admin</option><option value="read" \${m.role==='read'?'selected':''}>Lesen</option></select>\`;
-    const se=m.status==='active'?\`<span style="color:var(--grn);font-size:10px">● Aktiv</span>\`:\`<span style="color:var(--org);font-size:10px">◌ Ausstehend</span>\`;
-    return\`<div class="tr" style="grid-template-columns:2fr 1.5fr 1fr 1fr 32px">
-      <div style="display:flex;align-items:center;gap:6px"><div style="width:22px;height:22px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;color:#fff">\${av}</div><span style="font-size:12px;font-weight:500">\${m.name}\${m.you?' (Du)':''}</span></div>
-      <div style="font-size:10px;color:var(--muted)">\${m.email}</div>
-      <div>\${re}</div><div>\${se}</div>
-      <div>\${!m.you?\`<button class="dot-btn" data-td="\${m.id}">···</button>\`:''}</div>
-    </div>\`;
+  G('t-adm').textContent=S.team.filter(function(m){return m.role==='admin';}).length;
+  G('t-pen').textContent=S.team.filter(function(m){return m.status==='pending';}).length;
+  G('t-rows').innerHTML=S.team.map(function(m){
+    var av=m.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var roleSelect=m.you
+      ?'<span style="font-size:10px;color:var(--muted)">Du</span>'
+      :'<select style="background:var(--lt);border:1px solid var(--bdr);border-radius:5px;padding:2px 6px;font-size:11px;outline:none;font-family:inherit" data-ri="'+m.id+'">'
+        +'<option value="admin" '+(m.role==='admin'?'selected':'')+'>Admin</option>'
+        +'<option value="read" '+(m.role==='read'?'selected':'')+'>Lesen</option>'
+        +'</select>';
+    var statusBadge=m.status==='active'
+      ?'<span style="color:var(--grn);font-size:10px;font-weight:600">● Aktiv</span>'
+      :'<span style="color:var(--org);font-size:10px;font-weight:600">◌ Ausstehend</span>';
+    var dotBtn=!m.you?'<button class="dot-btn" data-tm-id="'+m.id+'" data-tm-email="'+(m.email||'')+'" data-tm-name="'+m.name+'">···</button>':'';
+    return '<div class="tr" style="grid-template-columns:2fr 1.5fr 1fr 1fr 32px">'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue2));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff">'+av+'</div>'
+      +'<span style="font-size:12px;font-weight:500">'+m.name+(m.you?' (Du)':'')+'</span></div>'
+      +'<div style="font-size:11px;color:var(--muted)">'+m.email+'</div>'
+      +'<div>'+roleSelect+'</div>'
+      +'<div>'+statusBadge+'</div>'
+      +'<div>'+dotBtn+'</div>'
+      +'</div>';
   }).join('');
+  // 3-Punkte-Menü Handler
+  G('t-rows').querySelectorAll('[data-tm-id]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var mid=btn.dataset.tmId;
+      var memail=btn.dataset.tmEmail;
+      var mname=btn.dataset.tmName;
+      showDot(btn,
+        // Erneut einladen
+        function(){
+          if(!memail){showT('Keine E-Mail hinterlegt');return;}
+          var token=localStorage.getItem('token')||'';
+          showT('⏳ Einladung wird gesendet...');
+          fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({name:mname,email:memail,role:'read'})})
+            .then(function(r){return r.json();})
+            .then(function(d){
+              if(d.success||d.error==='E-Mail bereits registriert'){showT('✓ Einladung erneut gesendet an '+memail);}
+              else{showT('Fehler: '+(d.error||''));}
+            }).catch(function(){showT('Netzwerkfehler');});
+        },
+        // Löschen
+        function(){
+          askConfirm('Mitglied "'+mname+'" entfernen?',function(){
+            var token=localStorage.getItem('token')||'';
+            fetch('/api/team/members',{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({id:mid})})
+              .then(function(){
+                S.team=S.team.filter(function(x){return String(x.id)!==String(mid);});
+                rTeam();showT('"'+mname+'" entfernt ✓');
+              }).catch(function(){showT('Fehler beim Löschen');});
+          });
+        },
+        null
+      );
+    });
+  });
 }
 
 function rCInvite(){
@@ -2018,7 +2066,19 @@ function confirmM(){
   }
   if(type==='invite'){
     const name=G('m-in').value.trim();if(!name)return;const email=G('m-ie').value.trim();if(!email)return;
-    S.team.push({id:uid(),name,email,role:'read',status:'pending'});rTeam();closeM();showT('Eingeladen ✓');return;
+    const token=localStorage.getItem('token')||'';
+    G('modal-ok').disabled=true;
+    fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({name,email,role:'read'})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        G('modal-ok').disabled=false;
+        if(d.success){
+          S.team.push({id:d.user?.id||uid(),name,email,role:'read',status:'pending'});
+          rTeam();closeM();showT('✓ Einladung gesendet an '+email);
+        } else {showT('Fehler: '+(d.error||''));}
+      }).catch(function(){G('modal-ok').disabled=false;showT('Netzwerkfehler');});
+    return;
   }
 }
 
@@ -2247,6 +2307,18 @@ export default function DashboardPage() {
         if (Array.isArray(d.projekte) && d.projekte.length > 0) w.S.projekte = d.projekte
         if (Array.isArray(d.kat) && d.kat.length > 0) w.S.kat = d.kat
         try { w.rDash() } catch(e) {}
+      }).catch(() => {})
+
+    // Team aus DB laden
+    fetch('/api/team/members', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => r.json()).then((members: any[]) => {
+        if (!Array.isArray(members) || !w.S) return
+        w.S.team = members.map((m: any) => ({
+          id: m.id, name: m.name, email: m.email,
+          role: m.role, status: m.status,
+          you: false
+        }))
+        try { w.rTeam() } catch(e) {}
       }).catch(() => {})
 
     // Alle Uploads laden fuer Analytics – persistent in S.allUploads
