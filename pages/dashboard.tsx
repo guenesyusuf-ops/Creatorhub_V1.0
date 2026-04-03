@@ -1739,6 +1739,9 @@ function openM(type,extra){
     const isE=type==='editC';const c=isE?S.creators.find(x=>String(x.id)===String(extra)):null;if(isE)S.form.cid=extra;
     title.textContent=isE?'Creator bearbeiten':'Creator hinzufügen';
     const to=S.tags.map(t=>\`<option value="\${t}" \${c?.tags?.includes(t)?'selected':''}>\${t}</option>\`).join('');
+    var kidsChecked=c?.kids?'checked':'';
+    var kidsOnVidChecked=c?.kidsOnVid?'checked':'';
+    var kidsAgesVal=(c?.kidsAges||[]).join(', ');
     body.innerHTML=\`
       <div class="fg"><label class="fl">Name *</label><input class="fi" id="m-cn" value="\${c?.name||''}" placeholder="Mira Hartley"></div>
       <div class="fg"><label class="fl">Kürzel</label><input class="fi" id="m-ci" value="\${c?.ini||''}" placeholder="MH" maxlength="3"></div>
@@ -1753,7 +1756,52 @@ function openM(type,extra){
         <div class="fg"><label class="fl">Geschlecht</label><select class="fi" id="m-cg"><option value="female" \${c?.gender==='female'?'selected':''}>♀ Female</option><option value="male" \${c?.gender==='male'?'selected':''}>♂ Male</option></select></div>
         <div class="fg"><label class="fl">Land</label><select class="fi" id="m-cc"><option value="DE" \${c?.country==='DE'?'selected':''}>🇩🇪 DE</option><option value="AT" \${c?.country==='AT'?'selected':''}>🇦🇹 AT</option><option value="CH" \${c?.country==='CH'?'selected':''}>🇨🇭 CH</option><option value="US" \${c?.country==='US'?'selected':''}>🇺🇸 US</option></select></div>
       </div>
-      <div class="fg"><label class="fl">Tags</label><select class="fi" id="m-ct" multiple style="height:62px">\${to}</select></div>\`;
+      <div class="fg"><label class="fl">Tags</label><select class="fi" id="m-ct" multiple style="height:62px">\${to}</select></div>
+      <div class="fg" style="background:var(--lt);border-radius:10px;padding:12px;border:1.5px solid var(--bdr)">
+        <label class="fl" style="margin-bottom:8px">👶 Kinder</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <input type="checkbox" id="m-kids" \${kidsChecked} style="width:16px;height:16px;cursor:pointer">
+          <label for="m-kids" style="font-size:12px;font-weight:500;cursor:pointer">Hat Kinder</label>
+        </div>
+        <div id="m-kids-extra" style="display:\${c?.kids?'block':'none'}">
+          <div class="fg"><label class="fl">Alter der Kinder (kommagetrennt, z.B. 3, 7)</label>
+            <input class="fi" id="m-kids-ages" value="\${kidsAgesVal}" placeholder="3, 7, 12"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            <input type="checkbox" id="m-kids-vid" \${kidsOnVidChecked} style="width:16px;height:16px;cursor:pointer">
+            <label for="m-kids-vid" style="font-size:12px;font-weight:500;cursor:pointer">Kinder erscheinen in Videos</label>
+          </div>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">🔒 Interne Notizen (nur Admins)</label>
+        <textarea class="fi" id="m-notizen" rows="3" placeholder="Interne Anmerkungen..." style="resize:vertical">\${c?.notizen||''}</textarea></div>
+      <div class="fg"><label class="fl">💬 Hinweis für Creator (sieht der Creator)</label>
+        <textarea class="fi" id="m-notizen-creator" rows="3" placeholder="z.B. Bitte immer Story-Format verwenden." style="resize:vertical">\${c?.notizenCreator||\'\'}</textarea></div>
+      <div class="fg" style="background:var(--lt);border-radius:10px;padding:12px;border:1.5px solid var(--bdr)">
+        <label class="fl" style="margin-bottom:8px">💶 Vergütung</label>
+        <select class="fi" id="m-verg" style="margin-bottom:8px">
+          <option value="provision" \${!c?.verguetung||c?.verguetung===\'provision\'?\'selected\':\'\'}>📊 Provision (%)</option>
+          <option value="fix" \${c?.verguetung===\'fix\'?\'selected\':\'\'}>💶 Fixbetrag (€)</option>
+          <option value="beides" \${c?.verguetung===\'beides\'?\'selected\':\'\'}>📊 + 💶 Beides</option>
+        </select>
+        <div id="m-verg-prov-wrap" style="display:\${!c?.verguetung||c?.verguetung===\'provision\'||c?.verguetung===\'beides\'?\'block\':\'none\'}">
+          <label class="fl">Provision %</label>
+          <input class="fi" id="m-verg-prov" type="number" value="\${c?.provision||\'\'}" placeholder="z.B. 10">
+        </div>
+        <div id="m-verg-fix-wrap" style="margin-top:8px;display:\${c?.verguetung===\'fix\'||c?.verguetung===\'beides\'?\'block\':\'none\'}">
+          <label class="fl">Fixbetrag €</label>
+          <input class="fi" id="m-verg-fix" type="number" value="\${c?.fixbetrag||\'\'}" placeholder="z.B. 500">
+        </div>
+      </div>\\`;
+    setTimeout(function(){
+      var kidsChk=G('m-kids');var kidsExtra=G('m-kids-extra');
+      if(kidsChk&&kidsExtra){kidsChk.addEventListener('change',function(){kidsExtra.style.display=this.checked?'block':'none';});}
+      var verg=G('m-verg');
+      if(verg){verg.addEventListener('change',function(){
+        var v=this.value;
+        G('m-verg-prov-wrap').style.display=(v==='provision'||v==='beides')?'block':'none';
+        G('m-verg-fix-wrap').style.display=(v==='fix'||v==='beides')?'block':'none';
+      });}
+    },0);
   }
   else if(type==='addFld'||type==='editFld'){
     const isE=type==='editFld';const tab=isE?extra.tab:(typeof extra==='string'?extra:S.aCT);S.form.tab=tab;
@@ -1822,20 +1870,36 @@ function confirmM(){
     const ini=(G('m-ci').value.trim()||name.slice(0,2)).toUpperCase();const email=G('m-ce').value.trim();
     const instagram=G('m-ig').value.trim();const age=+G('m-ca').value||25;const desc=G('m-cd').value.trim()||'Creator';
     const gender=G('m-cg').value;const country=G('m-cc').value;const tags=[...G('m-ct').selectedOptions].map(o=>o.value);
+    const kids=G('m-kids')?.checked||false;
+    const kidsOnVid=G('m-kids-vid')?.checked||false;
+    const kidsAgesRaw=G('m-kids-ages')?.value||'';
+    const kidsAges=kidsAgesRaw.split(',').map(x=>x.trim()).filter(x=>x.length>0);
+    const notizen=G('m-notizen')?.value||'';
+    const notizenCreator=G('m-notizen-creator')?.value||'';
+    const verguetung=G('m-verg')?.value||'provision';
+    const provision=G('m-verg-prov')?.value||'';
+    const fixbetrag=G('m-verg-fix')?.value||'';
     const pf=G('m-ph').files[0];const color=CL[S.creators.length%CL.length];
     const apply=async(photo)=>{
       const token=localStorage.getItem('token')||'';
-      const payload={name,initials:ini,email,instagram,age,gender,country,tags,description:desc,...(photo?{photo}:{})};
+      const payload={name,initials:ini,email,instagram,age,gender,country,tags,description:desc,
+        kids,kids_on_vid:kidsOnVid,kids_ages:kidsAges,notizen,notizen_creator:notizenCreator,
+        verguetung,provision,fixbetrag,
+        ...(photo?{photo}:{})};
       if(isE){
         const c=S.creators.find(x=>String(x.id)===String(S.form.cid));if(!c)return;
         try{await fetch('/api/creators',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:String(c.id),...payload})});}catch(e){}
-        Object.assign(c,{name,ini,email,instagram,age,desc,gender,country,tags});
+        Object.assign(c,{name,ini,email,instagram,age,desc,gender,country,tags,
+          kids,kidsOnVid,kidsAges,notizen,notizenCreator,verguetung,provision,fixbetrag});
         if(photo)c.photo=photo;if(S.aC?.id===c.id)rCHdr();showT(\`"\${name}" gespeichert ✓\`);
       }else{
         try{
           const r=await fetch('/api/creators',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({...payload,color_from:color})});
           const d=await r.json();if(!r.ok){showT('Fehler: '+(d.error||''));return;}
-          S.creators.push({id:d.id,name,ini,color,age,email,instagram,gender,country,tags,desc,up:new Date(),photo:photo||null,verguetung:'provision',provision:'',fixbetrag:'',notizen:'',notizenCreator:'',kids:false,kidsAges:[],kidsOnVid:false,invited:false,status:'ausstehend',flds:{bilder:[],videos:[],roh:[],auswertung:[]}});
+          S.creators.push({id:d.id,name,ini,color,age,email,instagram,gender,country,tags,desc,up:new Date(),
+            photo:photo||null,verguetung,provision,fixbetrag,
+            notizen,notizenCreator,kids,kidsAges,kidsOnVid,
+            invited:false,status:'ausstehend',flds:{bilder:[],videos:[],roh:[],auswertung:[]}});
           showT(\`"\${name}" angelegt ✓\`);
         }catch(e){showT('Netzwerkfehler');return;}
       }
