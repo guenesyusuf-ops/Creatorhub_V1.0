@@ -313,18 +313,31 @@ body.dark .search-inp{color:#e8e8ff;}
 @media(max-width:1200px){.right-sb{width:260px;min-width:260px;}}
 @media(max-width:1024px){.right-sb{display:none;}}
 @media(max-width:900px){
-  .sb{transform:translateX(-100%);z-index:200;}
-  .sb.open{transform:translateX(0);}
+  .sb{transform:translateX(-100%);z-index:300;transition:transform 0.25s ease;box-shadow:none;}
+  .sb.open{transform:translateX(0);box-shadow:4px 0 32px rgba(10,10,30,.18);}
   .app-body{margin-left:0;}
   .sb-overlay{display:block;}
+  .topbar{padding:0 14px;height:52px;}
+  .tb-t{font-size:14px;}
+  .sw{max-width:200px;}
+  .right-sb{display:none;}
 }
 @media(max-width:600px){
   .content{padding:12px;}
   .ph{flex-direction:column;align-items:flex-start;gap:8px;}
   .stat-row{grid-template-columns:1fr 1fr!important;}
-  .topbar{padding:0 14px;height:52px;}
+  .sw{max-width:140px;}
+  .hero-card{padding:20px 18px;}
+  .hero-greeting{font-size:18px;}
+  .hero-quote{font-size:11.5px;}
+  .an-th,.an-tr{grid-template-columns:1.5fr 1fr 1fr!important;}
+  .an-th div:nth-child(2),.an-tr div:nth-child(2){display:none;}
+  .an-th div:nth-child(3),.an-tr div:nth-child(3){display:none;}
+  .fg-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}
+  .file-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));}
+  .modal{padding:16px;border-radius:14px;}
 }
-.sb-overlay{display:none;position:fixed;inset:0;background:rgba(10,10,30,.5);z-index:199;}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(10,10,30,.5);z-index:299;}
 .menu-toggle{display:none;background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:var(--muted);}
 @media(max-width:900px){.menu-toggle{display:flex;align-items:center;}}
 .ch-card{transition:all .18s;}
@@ -2191,6 +2204,15 @@ G('portal-logout-btn')?.addEventListener('click',()=>{localStorage.removeItem('c
 document.addEventListener('click',e=>{if(!e.target.closest('#drop-menu')&&!e.target.closest('.dot-btn'))hideDot();if(!e.target.closest('#fp-panel')&&!e.target.closest('#fp-btn'))G('fp-panel').classList.remove('open');});
 G('menu-toggle')?.addEventListener('click',()=>{G('admin-sb').classList.toggle('open');G('sb-overlay').classList.toggle('open');});
 G('sb-overlay')?.addEventListener('click',()=>{G('admin-sb').classList.remove('open');G('sb-overlay').classList.remove('open');});
+// Mobile: Sidebar nach Menüklick schließen
+document.querySelectorAll('.sb .ni').forEach(function(ni){
+  ni.addEventListener('click',function(){
+    if(window.innerWidth<=900){
+      G('admin-sb').classList.remove('open');
+      G('sb-overlay').classList.remove('open');
+    }
+  });
+});
 
 // ── KALENDER
 var _calYear=new Date().getFullYear();var _calMonth=new Date().getMonth();
