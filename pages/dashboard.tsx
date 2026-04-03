@@ -515,7 +515,7 @@ const HTML = `
         <div class="tab" data-t="notizen">📝 Notizen & Vertrag</div>
       </div>
     </div>
-    <div id="c-tc" style="margin-top:32px"></div>
+    <div id="c-tc" style="margin-top:40px"></div>
   </div>
 </div>
 
