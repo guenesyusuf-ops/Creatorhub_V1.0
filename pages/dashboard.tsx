@@ -341,44 +341,27 @@ body.dark .search-inp{color:#e8e8ff;}
 @media(max-width:1024px){.right-sb{display:none;}}
 
 @media(max-width:900px){
-  /* Sidebar als Drawer - überlagert Content vollständig */
-  .sb{
-    transform:translateX(-100%);
-    z-index:300;
-    transition:transform 0.26s cubic-bezier(.4,0,.2,1);
-    box-shadow:none;
-    width:260px;
-    min-width:260px;
-  }
-  .sb.open{
-    transform:translateX(0);
-    box-shadow:6px 0 40px rgba(10,10,30,.22);
-  }
-  /* App-body braucht kein margin-left auf Mobile */
-  .app-body{margin-left:0;}
-  html,body{overflow:auto;height:auto;}
-  .app-body{flex-direction:column;height:auto;overflow:visible;}
-  .main{min-height:0;overflow:visible;}
-  .content{overflow:visible;}
-  .right-sb{
-    display:block;
-    width:100%;
-    min-width:unset;
-    border-left:none;
-    border-top:1.5px solid var(--bdr);
-    box-shadow:none;
-    height:auto;
-    overflow-y:visible;
-    padding:16px 14px;
-  }
-  #rsb-admin-info{display:none;}
-  #rsb-calendar{display:none;}
+  /* ── Scroll-Fix: Desktop hat overflow:hidden auf html/body/app-body ── */
+  html,body{height:auto!important;overflow-y:auto!important;overflow-x:hidden!important;}
+  .app-body{height:auto!important;overflow:visible!important;flex-direction:column;margin-left:0;}
+  .main{height:auto!important;overflow:visible!important;}
+  .content{overflow:visible!important;}
+  /* Sticky auf Mobile deaktivieren damit kein Scroll blockiert wird */
+  .topbar{position:relative!important;top:auto!important;}
+  .c-detail-top{position:relative!important;top:auto!important;}
+  .cdh{position:relative!important;top:auto!important;}
+  /* Sidebar als Drawer */
+  .sb{transform:translateX(-100%);z-index:300;transition:transform 0.25s ease;box-shadow:none;width:260px;min-width:260px;}
+  .sb.open{transform:translateX(0);box-shadow:6px 0 40px rgba(10,10,30,.18);}
+  .sb-overlay{display:block;}
   /* Topbar kompakter */
   .topbar{padding:0 12px;height:50px;}
   .tb-t{font-size:13px;}
-  /* Suchfeld auf Mobile ausblenden - spart Platz */
   .sw{display:none;}
-  .main{min-height:0;}
+  /* Rechte Sidebar unter Content */
+  .right-sb{display:block;width:100%;min-width:unset;border-left:none;border-top:1.5px solid var(--bdr);box-shadow:none;height:auto;overflow-y:visible;padding:16px 14px;}
+  #rsb-admin-info{display:none;}
+  #rsb-calendar{display:none;}
 }
 @media(max-width:600px){
   .content{padding:10px;}
