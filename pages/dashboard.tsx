@@ -132,10 +132,10 @@ body.dark .tag{background:rgba(79,110,247,.2);border-color:rgba(79,110,247,.3);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
 /* ── CREATOR DETAIL ── */
-.cdh{background:var(--surf);border:1.5px solid var(--bdr);border-radius:16px;padding:16px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;position:sticky;top:58px;z-index:40;box-shadow:var(--shadow);}
+.cdh{background:var(--surf);border:1.5px solid var(--bdr);border-radius:16px;padding:16px 18px;margin-bottom:0;display:flex;align-items:center;gap:14px;position:sticky;top:58px;z-index:40;box-shadow:var(--shadow);}
 .cd-av{width:56px;height:56px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;overflow:hidden;}
 .cd-av img{width:100%;height:100%;object-fit:cover;}
-.tabs{display:flex;border-bottom:1.5px solid var(--bdr);margin-bottom:16px;overflow-x:auto;gap:2px;}
+.tabs{display:flex;border-bottom:1.5px solid var(--bdr);margin-bottom:16px;overflow-x:auto;gap:2px;position:sticky;top:calc(58px + 90px);z-index:39;background:var(--surf);padding-top:8px;}
 .tab{padding:9px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;white-space:nowrap;flex-shrink:0;border-radius:8px 8px 0 0;transition:all .15s;}
 .tab:hover{color:var(--blue);background:rgba(79,110,247,.05);}
 .tab.on{color:var(--blue);border-bottom-color:var(--blue);background:rgba(79,110,247,.06);}
@@ -1206,7 +1206,7 @@ function rCT(tab){
 
   if(tab==='notizen'){
     G('c-tc').innerHTML=\`
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
         <div class="sc" style="padding:16px">
           <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔒 Interne Notizen</div>
           <textarea class="fi" id="notiz-inp" rows="4" placeholder="Interne Anmerkungen..." style="resize:vertical">\${c.notizen||''}</textarea>
@@ -1227,9 +1227,65 @@ function rCT(tab){
           <div class="fg" id="verg-fix-wrap"><label class="fl">Fixbetrag €</label><input class="fi" id="verg-fix" type="number" value="\${c.fixbetrag||''}"></div>
           <button class="btn btn-p" style="width:100%" id="verg-save">Vergütung speichern</button>
         </div>
-      </div>\`;
-    G('notiz-save').addEventListener('click',()=>{c.notizen=G('notiz-inp').value;c.notizenCreator=G('notiz-creator-inp').value;showT('Notizen gespeichert ✓');});
-    G('verg-save').addEventListener('click',()=>{c.verguetung=G('verg-model').value;c.provision=G('verg-prov')?.value||'';c.fixbetrag=G('verg-fix')?.value||'';rCHdr();showT('Vergütung gespeichert ✓');});
+        <div class="sc" style="padding:16px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:12px">📄 Vertrag</div>
+          <div id="vertrag-preview">
+            \${c.vertragUrl?'<div style="display:flex;align-items:center;gap:8px;background:#f0f4ff;border:1.5px solid #c7d7ff;border-radius:10px;padding:10px 12px"><span style="font-size:20px">📄</span><div><div style="font-size:12px;font-weight:600;color:#1a1a2e">'+c.vertragName+'</div><div style="font-size:10px;color:var(--muted)">Gespeichert in Supabase</div></div><a href="'+c.vertragUrl+'" target=\"_blank\" style="margin-left:auto;font-size:10px;color:var(--blue);font-weight:600;text-decoration:none">↓ Öffnen</a></div>':'<div style="font-size:12px;color:var(--muted);padding:8px 0">Noch kein Vertrag hochgeladen</div>'}
+          </div>
+          <label style="display:block;margin-top:12px;cursor:pointer">
+            <div class="btn" style="width:100%;justify-content:center;font-size:12px">📎 PDF hochladen</div>
+            <input type="file" accept="application/pdf" id="vertrag-inp" style="display:none">
+          </label>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Nur PDF · Max. 5 MB</div>
+        </div>
+      </div>\\`;
+    G('notiz-save').addEventListener('click',function(){
+      var token=localStorage.getItem('token')||'';
+      c.notizen=G('notiz-inp').value;c.notizenCreator=G('notiz-creator-inp').value;
+      fetch('/api/creators',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({id:String(c.id),notizen:c.notizen,notizen_creator:c.notizenCreator})}).catch(function(){});
+      showT('Notizen gespeichert ✓');
+    });
+    G('verg-save').addEventListener('click',function(){
+      var token=localStorage.getItem('token')||'';
+      c.verguetung=G('verg-model').value;c.provision=G('verg-prov')?.value||'';c.fixbetrag=G('verg-fix')?.value||'';
+      fetch('/api/creators',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({id:String(c.id),verguetung:c.verguetung,provision:c.provision,fixbetrag:c.fixbetrag})}).catch(function(){});
+      rCHdr();showT('Vergütung gespeichert ✓');
+    });
+    // Vertrag Upload Handler – zu R2 + Supabase
+    G('vertrag-inp')?.addEventListener('change',function(){
+      var file=this.files[0];if(!file)return;
+      if(file.type!=='application/pdf'){showT('Nur PDF-Dateien erlaubt');return;}
+      if(file.size>5*1024*1024){showT('PDF max. 5 MB');return;}
+      var token=localStorage.getItem('token')||'';
+      showT('⏳ Vertrag wird hochgeladen...');
+      // 1. Signed URL von R2 holen
+      fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({fileName:file.name,fileType:'application/pdf',creatorId:String(c.id),tab:'vertrag'})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(!d.signedUrl){showT('Fehler beim Upload');return;}
+          // 2. Datei direkt zu R2 hochladen
+          return fetch(d.signedUrl,{method:'PUT',headers:{'Content-Type':'application/pdf'},body:file})
+            .then(function(){
+              // 3. URL in Supabase speichern
+              return fetch('/api/creators',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                body:JSON.stringify({id:String(c.id),vertrag_url:d.publicUrl,vertrag_name:file.name})});
+            })
+            .then(function(){
+              c.vertragUrl=d.publicUrl;c.vertragName=file.name;
+              var prev=G('vertrag-preview');
+              if(prev)prev.innerHTML='<div style="display:flex;align-items:center;gap:8px;background:#f0f4ff;border:1.5px solid #c7d7ff;border-radius:10px;padding:10px 12px">'
+                +'<span style="font-size:20px">📄</span>'
+                +'<div><div style="font-size:12px;font-weight:600;color:#1a1a2e">'+file.name+'</div>'
+                +'<div style="font-size:10px;color:var(--muted)">In Supabase gespeichert</div></div>'
+                +'<a href="'+d.publicUrl+'" target="_blank" style="margin-left:auto;font-size:10px;color:var(--blue);font-weight:600;text-decoration:none">↓ Öffnen</a>'
+                +'</div>';
+              showT('Vertrag gespeichert ✓');
+            });
+        }).catch(function(){showT('Netzwerkfehler beim Vertrag-Upload');});
+    });
     return;
   }
 
@@ -2403,6 +2459,7 @@ export default function DashboardPage() {
           photo: rc.photo || null, instagram: rc.instagram || '',
           verguetung: rc.verguetung || 'provision', provision: rc.provision || '',
           fixbetrag: rc.fixbetrag || '', notizen: rc.notizen || '', notizenCreator: rc.notizen_creator || '',
+          vertragUrl: rc.vertrag_url || null, vertragName: rc.vertrag_name || null,
           kids: rc.kids || false, kidsAges: rc.kids_ages || [], kidsOnVid: rc.kids_on_vid || false,
           flds: { bilder: [], videos: [], roh: [], auswertung: [] },
           up: new Date(),
