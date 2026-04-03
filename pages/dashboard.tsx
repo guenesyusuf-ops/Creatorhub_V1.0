@@ -515,7 +515,7 @@ const HTML = `
         <div class="tab" data-t="notizen">📝 Notizen & Vertrag</div>
       </div>
     </div>
-    <div id="c-tc" style="margin-top:40px"></div>
+    <div id="c-tc" style="margin-top:32px"></div>
   </div>
 </div>
 
@@ -1233,31 +1233,123 @@ function rCT(tab){
   S.bulkSel=[];S.bulkMode=false;
 
   if(tab==='notizen'){
-    G('c-tc').innerHTML=\`
+    var vertragListHtml='';
+    if(c.vertraege&&c.vertraege.length){
+      vertragListHtml=c.vertraege.map(function(v,i){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
+          +'<span style="font-size:16px">📄</span>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:12px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v.name+'</div>'
+          +'<div style="font-size:10px;color:var(--muted)">'+v.date+'</div>'
+          +'</div>'
+          +(v.url?'<a href="'+v.url+'" target="_blank" style="font-size:10px;color:var(--blue);font-weight:600;text-decoration:none;flex-shrink:0">Öffnen</a>':'')
+          +'<button class="btn btn-sm" data-del-v="'+i+'" style="font-size:10px;padding:2px 7px;color:var(--red);border-color:var(--red)">✕</button>'
+          +'</div>';
+      }).join('');
+    } else {
+      vertragListHtml='<div style="font-size:12px;color:var(--muted);padding:8px 0">Noch keine Verträge hochgeladen</div>';
+    }
+    G('c-tc').innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="sc" style="padding:16px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔒 Interne Notizen</div>
-          <textarea class="fi" id="notiz-inp" rows="4" placeholder="Interne Anmerkungen..." style="resize:vertical">\${c.notizen||''}</textarea>
-          <div style="font-size:13px;font-weight:600;margin-top:14px;margin-bottom:4px">💬 Hinweis für Creator</div>
-          <textarea class="fi" id="notiz-creator-inp" rows="4" placeholder="z.B. Bitte immer Story-Format verwenden." style="resize:vertical">\${c.notizenCreator||''}</textarea>
-          <button class="btn btn-p" style="width:100%;margin-top:8px" id="notiz-save">Notizen speichern</button>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="sc" style="padding:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔒 Interne Notizen</div>
+            <textarea class="fi" id="notiz-inp" rows="4" placeholder="Interne Anmerkungen..." style="resize:vertical">${c.notizen||''}</textarea>
+            <div style="font-size:13px;font-weight:600;margin-top:14px;margin-bottom:4px">💬 Hinweis für Creator</div>
+            <textarea class="fi" id="notiz-creator-inp" rows="4" placeholder="z.B. Bitte immer Story-Format verwenden." style="resize:vertical">${c.notizenCreator||''}</textarea>
+            <button class="btn btn-p" style="width:100%;margin-top:8px" id="notiz-save">Notizen speichern</button>
+          </div>
+          <div class="sc" style="padding:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:12px">📄 Verträge</div>
+            <div id="vertrag-list">${vertragListHtml}</div>
+            <label style="display:block;margin-top:12px;cursor:pointer">
+              <div class="btn btn-p" style="width:100%;justify-content:center;font-size:12px;margin-top:4px">+ Vertrag hochladen (PDF)</div>
+              <input type="file" accept="application/pdf" id="vertrag-inp" style="display:none" multiple>
+            </label>
+            <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Nur PDF · Max. 10 MB pro Datei</div>
+          </div>
         </div>
         <div class="sc" style="padding:16px">
           <div style="font-size:13px;font-weight:600;margin-bottom:4px">💶 Vergütungsmodell</div>
           <div class="fg"><label class="fl">Modell</label>
             <select class="fi" id="verg-model">
-              <option value="provision" \${c.verguetung==='provision'?'selected':''}>Provision (%)</option>
-              <option value="fix" \${c.verguetung==='fix'?'selected':''}>Fixbetrag (€)</option>
-              <option value="beides" \${c.verguetung==='beides'?'selected':''}>Beides</option>
+              <option value="provision" ${c.verguetung==='provision'?'selected':''}>Provision (%)</option>
+              <option value="fix" ${c.verguetung==='fix'?'selected':''}>Fixbetrag (€)</option>
+              <option value="beides" ${c.verguetung==='beides'?'selected':''}>Beides</option>
             </select>
           </div>
-          <div class="fg" id="verg-prov-wrap"><label class="fl">Provision %</label><input class="fi" id="verg-prov" type="number" value="\${c.provision||''}"></div>
-          <div class="fg" id="verg-fix-wrap"><label class="fl">Fixbetrag €</label><input class="fi" id="verg-fix" type="number" value="\${c.fixbetrag||''}"></div>
+          <div class="fg" id="verg-prov-wrap"><label class="fl">Provision %</label><input class="fi" id="verg-prov" type="number" value="${c.provision||''}"></div>
+          <div class="fg" id="verg-fix-wrap"><label class="fl">Fixbetrag €</label><input class="fi" id="verg-fix" type="number" value="${c.fixbetrag||''}"></div>
           <button class="btn btn-p" style="width:100%" id="verg-save">Vergütung speichern</button>
         </div>
-      </div>\`;
+      </div>`;
     G('notiz-save').addEventListener('click',()=>{c.notizen=G('notiz-inp').value;c.notizenCreator=G('notiz-creator-inp').value;showT('Notizen gespeichert ✓');});
     G('verg-save').addEventListener('click',()=>{c.verguetung=G('verg-model').value;c.provision=G('verg-prov')?.value||'';c.fixbetrag=G('verg-fix')?.value||'';rCHdr();showT('Vergütung gespeichert ✓');});
+    // Vertrags-Upload
+    if(!c.vertraege)c.vertraege=[];
+    G('vertrag-inp')?.addEventListener('change',function(){
+      var files=Array.from(this.files);
+      files.forEach(function(file){
+        if(file.type!=='application/pdf'){showT('Nur PDF erlaubt');return;}
+        if(file.size>10*1024*1024){showT(file.name+' ist zu groß (max 10 MB)');return;}
+        var token=localStorage.getItem('token')||'';
+        showT('⏳ '+file.name+' wird hochgeladen...');
+        fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({fileName:file.name,fileType:'application/pdf',creatorId:String(c.id),tab:'vertrag'})})
+          .then(function(r){return r.json();})
+          .then(function(d){
+            if(!d.signedUrl){showT('Upload-Fehler');return;}
+            return fetch(d.signedUrl,{method:'PUT',headers:{'Content-Type':'application/pdf'},body:file})
+              .then(function(){
+                var entry={name:file.name,url:d.publicUrl,r2Key:d.key,date:new Date().toLocaleDateString('de-DE')};
+                c.vertraege.push(entry);
+                // In Supabase speichern
+                fetch('/api/creators',{method:'PATCH',
+                  headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                  body:JSON.stringify({id:String(c.id),vertraege:c.vertraege})}).catch(function(){});
+                // Liste neu rendern
+                var list=G('vertrag-list');
+                if(list){
+                  list.innerHTML=c.vertraege.map(function(v,i){
+                    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
+                      +'<span style="font-size:16px">📄</span>'
+                      +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v.name+'</div>'
+                      +'<div style="font-size:10px;color:var(--muted)">'+v.date+'</div></div>'
+                      +(v.url?'<a href="'+v.url+'" target="_blank" style="font-size:10px;color:var(--blue);font-weight:600;text-decoration:none;flex-shrink:0">Öffnen</a>':'')
+                      +'<button class="btn btn-sm" data-del-v="'+i+'" style="font-size:10px;padding:2px 7px;color:var(--red);border-color:var(--red)">✕</button>'
+                      +'</div>';
+                  }).join('');
+                  // Löschen-Handler neu binden
+                  list.querySelectorAll('[data-del-v]').forEach(function(btn){
+                    btn.addEventListener('click',function(){
+                      var idx=parseInt(btn.dataset.delV);
+                      c.vertraege.splice(idx,1);
+                      var _tok=localStorage.getItem('token')||'';
+                      fetch('/api/creators',{method:'PATCH',
+                        headers:{'Content-Type':'application/json','Authorization':'Bearer '+_tok},
+                        body:JSON.stringify({id:String(c.id),vertraege:c.vertraege})}).catch(function(){});
+                      rCT('notizen');
+                    });
+                  });
+                }
+                showT('✓ '+file.name+' hochgeladen');
+              });
+          }).catch(function(){showT('Netzwerkfehler');});
+      });
+      this.value='';
+    });
+    // Löschen-Handler für bestehende Verträge
+    G('vertrag-list')?.querySelectorAll('[data-del-v]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var idx=parseInt(btn.dataset.delV);
+        c.vertraege.splice(idx,1);
+        var _tok2=localStorage.getItem('token')||'';
+        fetch('/api/creators',{method:'PATCH',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+_tok2},
+          body:JSON.stringify({id:String(c.id),vertraege:c.vertraege})}).catch(function(){});
+        rCT('notizen');
+      });
+    });
     return;
   }
 
@@ -2431,6 +2523,7 @@ export default function DashboardPage() {
           photo: rc.photo || null, instagram: rc.instagram || '',
           verguetung: rc.verguetung || 'provision', provision: rc.provision || '',
           fixbetrag: rc.fixbetrag || '', notizen: rc.notizen || '', notizenCreator: rc.notizen_creator || '',
+          vertraege: Array.isArray(rc.vertraege) ? rc.vertraege : [],
           kids: rc.kids || false, kidsAges: rc.kids_ages || [], kidsOnVid: rc.kids_on_vid || false,
           flds: { bilder: [], videos: [], roh: [], auswertung: [] },
           up: new Date(),
