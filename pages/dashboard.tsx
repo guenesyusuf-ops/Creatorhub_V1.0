@@ -1526,7 +1526,47 @@ function rCInvite(){
   };
   G('ci-prod').innerHTML=\`<option value="">– Kein Produkt –</option>\`+S.produkte.map(p=>\`<option value="\${p.id}">\${p.name}</option>\`).join('');
   const invited=S.creators.filter(c=>c.invited);
-  G('ci-list').innerHTML=invited.length?invited.map(c=>'<div style="padding:8px 0;border-bottom:1px solid var(--bdr);font-size:12px"><strong>'+c.name+'</strong> <span style="color:var(--grn)">✓ Eingeladen</span></div>').join(''):'<div style="color:var(--muted);font-size:12px">Noch keine Creator eingeladen</div>';
+  if(!invited.length){
+    G('ci-list').innerHTML='<div style="color:var(--muted);font-size:12px">Noch keine Creator eingeladen</div>';
+    return;
+  }
+  G('ci-list').innerHTML=invited.map(function(c){
+    var isAktiv=c.status==='aktiv';
+    var statusBadge=isAktiv
+      ?'<span style="display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;font-size:10px;font-weight:600;padding:2px 8px">● Aktiv</span>'
+      :'<span style="display:inline-flex;align-items:center;gap:3px;background:#f4f5f7;color:#9999bb;border:1px solid #e8e8f0;border-radius:20px;font-size:10px;font-weight:600;padding:2px 8px">○ Nicht aktiv</span>';
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'
+      +(c.photo?'<img src="'+c.photo+'" style="width:28px;height:28px;border-radius:8px;object-fit:cover;flex-shrink:0">'
+        :'<div style="width:28px;height:28px;border-radius:8px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">'+c.ini+'</div>')
+      +'<div><div style="font-size:12px;font-weight:600;color:#1a1a2e">'+c.name+'</div>'
+      +(c.email?'<div style="font-size:10px;color:var(--muted)">'+c.email+'</div>':'')
+      +'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+      +statusBadge
+      +'<button class="btn btn-sm" data-resend-id="'+c.id+'" style="font-size:10px;padding:3px 8px" title="Link erneut senden">↗ Erneut</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+  // Resend-Button Handler
+  G('ci-list').querySelectorAll('[data-resend-id]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var c=S.creators.find(function(x){return String(x.id)===String(btn.dataset.resendId);});
+      if(!c)return;
+      var email=c.email;
+      if(!email){showT('Keine E-Mail für diesen Creator hinterlegt');return;}
+      btn.textContent='⏳';btn.disabled=true;
+      var token=localStorage.getItem('token')||'';
+      fetch('/api/creators/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({creatorId:c.id,email:email,name:c.name})})
+        .then(function(r){return r.json();})
+        .then(function(data){
+          if(data.success){showT('✓ Einladung erneut gesendet an '+email);}
+          else{showT('Fehler: '+(data.error||''));}
+          btn.textContent='↗ Erneut';btn.disabled=false;
+        }).catch(function(){showT('Netzwerkfehler');btn.textContent='↗ Erneut';btn.disabled=false;});
+    });
+  });
 }
 
 let _portalCreator=null;
@@ -1905,7 +1945,8 @@ function confirmM(){
       }
       rCreators();uBdg();rDash();closeM();
     };
-    if(pf){const r=new FileReader();r.onload=e=>apply(e.target.result);r.readAsDataURL(pf);}else apply(null);return;
+    // Foto nur beim Bearbeiten mitschicken (POST hat 4.5MB Limit)
+    if(isE&&pf){const r=new FileReader();r.onload=e=>apply(e.target.result);r.readAsDataURL(pf);}else apply(null);return;
   }
   if(type==='addFld'||type==='editFld'){
     const isE=type==='editFld';const tab=S.form.tab||S.aCT;const name=G('m-fn').value.trim();if(!name){showT('Name erforderlich');return;}
