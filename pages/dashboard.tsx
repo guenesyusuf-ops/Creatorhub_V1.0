@@ -972,6 +972,8 @@ function rDash(){
   rRightSidebar();
 }
 
+var _anPage=0; // aktuelle Seite (0-basiert)
+
 function rAnalytics(){
   var anEl=G('analytics-section');
   if(!anEl)return;
@@ -996,27 +998,18 @@ function rAnalytics(){
   }
 
   var rows=creatorsWithUploads.map(function(c){
-    // Alle Uploads dieses Creators – nach created_at DESC sortiert
     var uploads=S.allUploads.filter(function(u){return String(u.creator_id)===String(c.id);});
-
-    // Neuesten Upload mit uploaded_at bevorzugen (ist online)
     var onlineUpload=uploads.find(function(u){return u.uploaded_at;});
     var latest=onlineUpload||uploads[0];
-
-    // Felder direkt aus DB-Daten
     var product=latest.product||null;
     var batch=latest.batch||null;
     var online=!!onlineUpload;
-    // uploaded_at = Datum wann Content live ging (vom Admin gesetzt)
     var uploadedAt=onlineUpload?onlineUpload.uploaded_at:null;
     var dateStr=uploadedAt
       ?new Date(uploadedAt).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})
       :null;
-
-    return {
-      cid:c.id,cname:c.name,ccolor:c.color,cini:c.ini,cphoto:c.photo,
-      product:product,batch:batch,online:online,dateStr:dateStr,count:uploads.length
-    };
+    return {cid:c.id,cname:c.name,ccolor:c.color,cini:c.ini,cphoto:c.photo,
+      product:product,batch:batch,online:online,dateStr:dateStr,count:uploads.length};
   });
 
   // Online oben, dann alphabetisch
@@ -1025,7 +1018,13 @@ function rAnalytics(){
     return a.cname.localeCompare(b.cname);
   });
 
-  var tableRows=rows.map(function(r){
+  // Pagination
+  var perPage=5;
+  var totalPages=Math.ceil(rows.length/perPage);
+  if(_anPage>=totalPages)_anPage=0;
+  var pageRows=rows.slice(_anPage*perPage,(_anPage+1)*perPage);
+
+  var tableRows=pageRows.map(function(r){
     var av=r.cphoto
       ?'<img src="'+r.cphoto+'" style="width:28px;height:28px;border-radius:8px;object-fit:cover">'
       :'<div style="width:28px;height:28px;border-radius:8px;background:'+r.ccolor
@@ -1044,7 +1043,17 @@ function rAnalytics(){
       +'</div>';
   }).join('');
 
-  anEl.innerHTML=header+tableRows+'</div>';
+  // Pagination Footer – nur wenn mehr als 5 Creator
+  var paginationHtml='';
+  if(totalPages>1){
+    paginationHtml='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px 2px;border-top:1px solid var(--bdr);margin-top:4px">'
+      +'<button id="an-prev" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s"'+((_anPage===0)?'disabled style="opacity:.35;cursor:default;background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:4px 12px;font-size:12px;font-family:inherit"':'')+'> ← </button>'
+      +'<span style="font-size:11px;color:var(--muted);font-weight:500">'+(_anPage+1)+' / '+totalPages+'</span>'
+      +'<button id="an-next" style="background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--blue);font-family:inherit;font-weight:600;transition:all .15s"'+((_anPage>=totalPages-1)?'disabled style="opacity:.35;cursor:default;background:none;border:1.5px solid var(--bdr);border-radius:8px;padding:4px 12px;font-size:12px;font-family:inherit"':'')+'> → </button>'
+      +'</div>';
+  }
+
+  anEl.innerHTML=header+tableRows+paginationHtml+'</div>';
 
   anEl.querySelectorAll('[data-an-cid]').forEach(function(row){
     row.addEventListener('click',function(){
@@ -1053,6 +1062,10 @@ function rAnalytics(){
     });
   });
   G('an-view-all')?.addEventListener('click',function(){go('creators');});
+
+  // Pagination Buttons
+  G('an-prev')?.addEventListener('click',function(){if(_anPage>0){_anPage--;rAnalytics();}});
+  G('an-next')?.addEventListener('click',function(){if(_anPage<totalPages-1){_anPage++;rAnalytics();}});
 }
 
 function rRightSidebar(){
