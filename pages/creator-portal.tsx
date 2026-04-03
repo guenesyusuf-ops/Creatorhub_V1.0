@@ -1,4 +1,4 @@
-// v2.5 – Profilbild änderbar, "zeigt Kinder" entfernt, Video-Lightbox Fix
+// v2.6 – Kommentar-Funktion für Creator hinzugefügt
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -17,6 +17,8 @@ interface Upload {
   created_at: string
   seen_by_admin: boolean
   r2_key: string | null
+  unread_comments?: number
+  comments_total?: number
 }
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
@@ -40,6 +42,12 @@ export default function CreatorPortal() {
   const [activeTab, setActiveTab] = useState<Tab>('bilder')
   const [toast, setToast] = useState('')
   const [lightbox, setLightbox] = useState<Upload | null>(null)
+
+  // Kommentar-State
+  const [commentFile, setCommentFile] = useState<Upload | null>(null)
+  const [comments, setComments] = useState<any[]>([])
+  const [commentText, setCommentText] = useState('')
+  const [commentLoading, setCommentLoading] = useState(false)
 
   // Upload form
   const [uCategory, setUCategory] = useState<Tab>('bilder')
@@ -94,7 +102,22 @@ export default function CreatorPortal() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      if (Array.isArray(data)) setUploads(data)
+      if (!Array.isArray(data)) return
+      // Ungelesene Kommentare für jede Datei laden
+      const withComments = await Promise.all(data.map(async (u: Upload) => {
+        try {
+          const cr = await fetch(`/api/comments?upload_id=${u.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          const cms = await cr.json()
+          if (Array.isArray(cms)) {
+            u.unread_comments = cms.filter((c: any) => !c.read_by_creator).length
+            u.comments_total = cms.length
+          }
+        } catch {}
+        return u
+      }))
+      setUploads(withComments)
     } catch {}
   }
 
@@ -104,7 +127,6 @@ export default function CreatorPortal() {
     const token = localStorage.getItem('creator_token') || ''
     showToast('Profilbild wird hochgeladen...')
     try {
-      // Schritt 1: Presigned URL
       const urlRes = await fetch('/api/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -113,7 +135,6 @@ export default function CreatorPortal() {
       if (!urlRes.ok) { showToast('Fehler beim Vorbereiten'); return }
       const { signedUrl, publicUrl } = await urlRes.json()
 
-      // Schritt 2: Direkt zu R2
       const putRes = await fetch(signedUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
@@ -121,7 +142,6 @@ export default function CreatorPortal() {
       })
       if (!putRes.ok) { showToast('Upload fehlgeschlagen'); return }
 
-      // Schritt 3: Supabase updaten
       const patchRes = await fetch('/api/creators', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -146,6 +166,59 @@ export default function CreatorPortal() {
 
   function closeLightbox() { setLightbox(null) }
 
+  async function openComments(u: Upload) {
+    setCommentFile(u)
+    setComments([])
+    setCommentText('')
+    const token = localStorage.getItem('creator_token') || ''
+    try {
+      const res = await fetch(`/api/comments?upload_id=${u.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (Array.isArray(data)) setComments(data)
+      // Als gelesen markieren
+      fetch('/api/comments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ upload_id: u.id, role: 'creator' })
+      })
+      // Badge zurücksetzen
+      setUploads(prev => prev.map(x => x.id === u.id ? { ...x, unread_comments: 0 } : x))
+    } catch {}
+  }
+
+  async function sendComment() {
+    if (!commentFile || !commentText.trim()) return
+    setCommentLoading(true)
+    const token = localStorage.getItem('creator_token') || ''
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          upload_id: commentFile.id,
+          creator_id: creator.id,
+          author_role: 'creator',
+          author_name: creator.name,
+          message: commentText.trim()
+        })
+      })
+      if (res.ok) {
+        setCommentText('')
+        const cr = await fetch(`/api/comments?upload_id=${commentFile.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await cr.json()
+        if (Array.isArray(data)) setComments(data)
+        showToast('Kommentar gesendet ✓')
+      } else {
+        showToast('Fehler beim Senden')
+      }
+    } catch { showToast('Fehler') }
+    setCommentLoading(false)
+  }
+
   async function handleUpload() {
     if (!uLabel.trim()) { showToast('Bitte eine Bezeichnung eingeben'); return }
     if (!uFile && !uLink.trim()) { showToast('Bitte eine Datei auswählen oder einen Link eintragen'); return }
@@ -153,7 +226,6 @@ export default function CreatorPortal() {
     const token = localStorage.getItem('creator_token') || ''
     setUploading(true); setUploadPct(0)
 
-    // Link-only
     if (uLink.trim() && !uFile) {
       try {
         const fd = new FormData()
@@ -174,7 +246,6 @@ export default function CreatorPortal() {
       return
     }
 
-    // Presigned URL Upload
     try {
       setUploadPct(5)
       const urlRes = await fetch('/api/upload-url', {
@@ -249,7 +320,6 @@ export default function CreatorPortal() {
   const tabUploads = uploads.filter(u => u.tab === activeTab)
   const totalUploads = uploads.length
 
-  // ── LOGIN ─────────────────────────────────────────────────────────────────
   if (view === 'login') return (
     <>
       <Head><title>Creator Portal – Filapen</title></Head>
@@ -275,7 +345,6 @@ export default function CreatorPortal() {
     </>
   )
 
-  // ── PORTAL ────────────────────────────────────────────────────────────────
   return (
     <>
       <Head><title>{creator?.name} – Creator Portal</title></Head>
@@ -405,27 +474,48 @@ export default function CreatorPortal() {
                   <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                       {tabUploads.map(u => (
-                        <div key={u.id} onClick={() => handleCardClick(u)}
-                          style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
+                        <div key={u.id}
+                          style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', transition: 'border-color .15s' }}
                           onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
                           onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
-                          <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
-                            {u.mime_type?.startsWith('image/') && u.file_url
-                              ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
-                              : u.file_type === 'link' ? '🔗' : '📄'}
-                            {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
-                              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
-                              </div>
-                            )}
+                          {/* Thumbnail – klickbar für Lightbox */}
+                          <div onClick={() => handleCardClick(u)} style={{ cursor: 'pointer' }}>
+                            <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
+                              {u.mime_type?.startsWith('image/') && u.file_url
+                                ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
+                                : u.file_type === 'link' ? '🔗' : '📄'}
+                              {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
+                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ padding: '8px 10px 4px' }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
+                              {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
+                              {(u as any).product && <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
+                              <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
+                              {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
+                            </div>
                           </div>
-                          <div style={{ padding: '8px 10px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
-                            {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
-                            {(u as any).product && <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
-                            <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
-                            {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
+                          {/* Kommentar-Button */}
+                          <div style={{ padding: '0 10px 10px' }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); openComments(u) }}
+                              style={{
+                                width: '100%',
+                                background: (u.unread_comments ?? 0) > 0 ? '#4f6ef7' : '#f0f0f3',
+                                color: (u.unread_comments ?? 0) > 0 ? '#fff' : '#666',
+                                border: 'none', borderRadius: 6, padding: '5px 8px',
+                                fontSize: 10, cursor: 'pointer', fontFamily: 'inherit'
+                              }}>
+                              {(u.unread_comments ?? 0) > 0
+                                ? `💬 ${u.unread_comments} neue${u.unread_comments !== 1 ? '' : 'r'} Kommentar${u.unread_comments !== 1 ? 'e' : ''}`
+                                : (u.comments_total ?? 0) > 0
+                                  ? `💬 ${u.comments_total} Kommentar${(u.comments_total ?? 0) !== 1 ? 'e' : ''}`
+                                  : '💬 Kommentare'}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -630,6 +720,39 @@ export default function CreatorPortal() {
             }} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
               ⬇ Herunterladen
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* KOMMENTAR MODAL */}
+      {commentFile && (
+        <div onClick={() => setCommentFile(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 9997, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, padding: 20, width: '100%', maxWidth: 420, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 32px rgba(0,0,0,.2)' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: '#111' }}>💬 Kommentare – {commentFile.file_name}</div>
+            <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12, minHeight: 60 }}>
+              {comments.length === 0
+                ? <div style={{ fontSize: 12, color: '#aaa', padding: '8px 0' }}>Noch keine Kommentare.</div>
+                : comments.map((c, i) => (
+                  <div key={i} style={{ background: c.author_role === 'admin' ? '#eff2ff' : '#f4f5f7', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: '#888', marginBottom: 3 }}>{c.author_name} · {new Date(c.created_at).toLocaleString('de-DE')}</div>
+                    <div style={{ fontSize: 12, color: c.author_role === 'admin' ? '#4f6ef7' : '#111' }}>{c.message}</div>
+                  </div>
+                ))
+              }
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <textarea
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment() } }}
+                placeholder="Antwort schreiben..."
+                rows={2}
+                style={{ flex: 1, border: '1px solid #e8e8ec', borderRadius: 7, padding: '8px 10px', fontFamily: 'inherit', fontSize: 12, resize: 'none', outline: 'none' }} />
+              <button onClick={sendComment} disabled={commentLoading} style={{ ...s.btnP, alignSelf: 'flex-end', padding: '8px 14px' }}>
+                {commentLoading ? '...' : 'Senden'}
+              </button>
+            </div>
+            <button onClick={() => setCommentFile(null)} style={{ ...s.btnGhost, marginTop: 8, width: '100%' }}>Schließen</button>
           </div>
         </div>
       )}
