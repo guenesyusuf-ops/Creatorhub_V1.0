@@ -1,4 +1,4 @@
-// v2.6 – Kommentar-Funktion für Creator hinzugefügt
+// v2.5 – Profilbild änderbar, "zeigt Kinder" entfernt, Video-Lightbox Fix
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -17,8 +17,6 @@ interface Upload {
   created_at: string
   seen_by_admin: boolean
   r2_key: string | null
-  unread_comments?: number
-  comments_total?: number
 }
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
@@ -42,12 +40,6 @@ export default function CreatorPortal() {
   const [activeTab, setActiveTab] = useState<Tab>('bilder')
   const [toast, setToast] = useState('')
   const [lightbox, setLightbox] = useState<Upload | null>(null)
-
-  // Kommentar-State
-  const [commentFile, setCommentFile] = useState<Upload | null>(null)
-  const [comments, setComments] = useState<any[]>([])
-  const [commentText, setCommentText] = useState('')
-  const [commentLoading, setCommentLoading] = useState(false)
 
   // Upload form
   const [uCategory, setUCategory] = useState<Tab>('bilder')
@@ -102,22 +94,7 @@ export default function CreatorPortal() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      if (!Array.isArray(data)) return
-      // Ungelesene Kommentare für jede Datei laden
-      const withComments = await Promise.all(data.map(async (u: Upload) => {
-        try {
-          const cr = await fetch(`/api/comments?upload_id=${u.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          const cms = await cr.json()
-          if (Array.isArray(cms)) {
-            u.unread_comments = cms.filter((c: any) => !c.read_by_creator).length
-            u.comments_total = cms.length
-          }
-        } catch {}
-        return u
-      }))
-      setUploads(withComments)
+      if (Array.isArray(data)) setUploads(data)
     } catch {}
   }
 
@@ -127,6 +104,7 @@ export default function CreatorPortal() {
     const token = localStorage.getItem('creator_token') || ''
     showToast('Profilbild wird hochgeladen...')
     try {
+      // Schritt 1: Presigned URL
       const urlRes = await fetch('/api/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -135,6 +113,7 @@ export default function CreatorPortal() {
       if (!urlRes.ok) { showToast('Fehler beim Vorbereiten'); return }
       const { signedUrl, publicUrl } = await urlRes.json()
 
+      // Schritt 2: Direkt zu R2
       const putRes = await fetch(signedUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
@@ -142,6 +121,7 @@ export default function CreatorPortal() {
       })
       if (!putRes.ok) { showToast('Upload fehlgeschlagen'); return }
 
+      // Schritt 3: Supabase updaten
       const patchRes = await fetch('/api/creators', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -166,59 +146,6 @@ export default function CreatorPortal() {
 
   function closeLightbox() { setLightbox(null) }
 
-  async function openComments(u: Upload) {
-    setCommentFile(u)
-    setComments([])
-    setCommentText('')
-    const token = localStorage.getItem('creator_token') || ''
-    try {
-      const res = await fetch(`/api/comments?upload_id=${u.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await res.json()
-      if (Array.isArray(data)) setComments(data)
-      // Als gelesen markieren
-      fetch('/api/comments', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ upload_id: u.id, role: 'creator' })
-      })
-      // Badge zurücksetzen
-      setUploads(prev => prev.map(x => x.id === u.id ? { ...x, unread_comments: 0 } : x))
-    } catch {}
-  }
-
-  async function sendComment() {
-    if (!commentFile || !commentText.trim()) return
-    setCommentLoading(true)
-    const token = localStorage.getItem('creator_token') || ''
-    try {
-      const res = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          upload_id: commentFile.id,
-          creator_id: creator.id,
-          author_role: 'creator',
-          author_name: creator.name,
-          message: commentText.trim()
-        })
-      })
-      if (res.ok) {
-        setCommentText('')
-        const cr = await fetch(`/api/comments?upload_id=${commentFile.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const data = await cr.json()
-        if (Array.isArray(data)) setComments(data)
-        showToast('Kommentar gesendet ✓')
-      } else {
-        showToast('Fehler beim Senden')
-      }
-    } catch { showToast('Fehler') }
-    setCommentLoading(false)
-  }
-
   async function handleUpload() {
     if (!uLabel.trim()) { showToast('Bitte eine Bezeichnung eingeben'); return }
     if (!uFile && !uLink.trim()) { showToast('Bitte eine Datei auswählen oder einen Link eintragen'); return }
@@ -226,6 +153,7 @@ export default function CreatorPortal() {
     const token = localStorage.getItem('creator_token') || ''
     setUploading(true); setUploadPct(0)
 
+    // Link-only
     if (uLink.trim() && !uFile) {
       try {
         const fd = new FormData()
@@ -246,6 +174,7 @@ export default function CreatorPortal() {
       return
     }
 
+    // Presigned URL Upload
     try {
       setUploadPct(5)
       const urlRes = await fetch('/api/upload-url', {
@@ -320,14 +249,15 @@ export default function CreatorPortal() {
   const tabUploads = uploads.filter(u => u.tab === activeTab)
   const totalUploads = uploads.length
 
+  // ── LOGIN ─────────────────────────────────────────────────────────────────
   if (view === 'login') return (
     <>
       <Head><title>Creator Portal – Filapen</title></Head>
       <style>{css}</style>
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f5f7', padding: 24 }}>
-        <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 16, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,.06)' }}>
-          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6, color: '#111' }}>Creator Portal</div>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 28 }}>Gib deinen Einladungscode ein um fortzufahren.</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f8', padding: 24 }}>
+        <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 20, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,.06)' }}>
+          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6, color: '#1a1a2e' }}>Creator Portal</div>
+          <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 28 }}>Gib deinen Einladungscode ein um fortzufahren.</div>
           <form onSubmit={e => { e.preventDefault(); loginWithCode(code) }}>
             <div style={{ marginBottom: 14 }}>
               <label style={s.fl}>Einladungscode</label>
@@ -345,6 +275,7 @@ export default function CreatorPortal() {
     </>
   )
 
+  // ── PORTAL ────────────────────────────────────────────────────────────────
   return (
     <>
       <Head><title>{creator?.name} – Creator Portal</title></Head>
@@ -353,11 +284,13 @@ export default function CreatorPortal() {
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
         {/* TOPBAR */}
-        <div style={{ background: '#fff', borderBottom: '1px solid #e8e8ec', height: 50, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>Creator Portal</div>
-          <div style={{ fontSize: 11, color: '#aaa' }}>Ansicht als Creator</div>
+        <div style={{ background: '#fff', borderBottom: '1px solid #e8e8f0', height: 54, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>F</div>
+            <div style={{ fontWeight: 800, fontSize: 13, color: '#1a1a2e' }}>filapen <span style={{ fontWeight: 500, fontSize: 11, color: '#8888aa' }}>· Creator Hub</span></div>
+          </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#888' }}>Angemeldet als: <strong style={{ color: '#111' }}>{creator?.name}</strong></span>
+            <span style={{ fontSize: 11, color: '#8888aa' }}>Angemeldet als: <strong style={{ color: '#1a1a2e' }}>{creator?.name}</strong></span>
             <button onClick={logout} style={s.btnGhost}>Abmelden</button>
           </div>
         </div>
@@ -365,7 +298,14 @@ export default function CreatorPortal() {
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
           {/* SIDEBAR */}
-          <div style={{ width: 200, background: '#fff', borderRight: '1px solid #e8e8ec', flexShrink: 0, padding: '12px 7px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ width: 210, background: '#fff', borderRight: '1px solid #e8e8f0', flexShrink: 0, padding: '0 8px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '18px 10px 14px', borderBottom: '1px solid #e8e8f0', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#fff', flexShrink: 0 }}>F</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e', letterSpacing: '-0.3px' }}>filapen</div>
+                <div style={{ fontSize: 9, color: '#8888aa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Creator Hub</div>
+              </div>
+            </div>
             <div style={s.navLabel}>Mein Bereich</div>
             {([
               { id: 'home', label: 'Mein Dashboard', icon: '⊞' },
@@ -373,7 +313,7 @@ export default function CreatorPortal() {
               { id: 'tips', label: 'Tipps & Tricks', icon: '💡' },
             ] as const).map(n => (
               <div key={n.id} className={`ni${page === n.id ? ' on' : ''}`} onClick={() => setPage(n.id)}>
-                <span style={{ width: 15, textAlign: 'center', fontSize: 12 }}>{n.icon}</span>{n.label}
+                <div className="ni-ico">{n.icon}</div>{n.label}
               </div>
             ))}
             <div style={{ ...s.navLabel, marginTop: 10 }}>Tipps & Tricks</div>
@@ -382,30 +322,30 @@ export default function CreatorPortal() {
               { id: 'skripte', label: 'Skripte', icon: '📝' },
               { id: 'lernvideos', label: 'Lernvideos', icon: '🎬' },
             ] as const).map(n => (
-              <div key={n.id} className={`ni${page === n.id ? ' on' : ''}`} style={{ paddingLeft: 20 }} onClick={() => setPage(n.id)}>
-                <span style={{ width: 15, textAlign: 'center', fontSize: 12 }}>{n.icon}</span>{n.label}
+              <div key={n.id} className={`ni${page === n.id ? ' on' : ''}`} onClick={() => setPage(n.id)}>
+                <div className="ni-ico">{n.icon}</div>{n.label}
               </div>
             ))}
-            <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #e8e8ec' }}>
-              <div style={{ fontSize: 10, color: '#aaa', padding: '0 6px' }}>
+            <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #e8e8f0' }}>
+              <div style={{ fontSize: 10, color: '#8888aa', padding: '0 6px' }}>
                 {totalUploads} Datei{totalUploads !== 1 ? 'en' : ''} hochgeladen
               </div>
             </div>
           </div>
 
           {/* MAIN */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#f4f5f7' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#f0f0f8' }}>
 
             {/* ── HOME ── */}
             {page === 'home' && (
               <>
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>Willkommen zurück 👋</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
+                  <div style={{ fontSize: 11, color: '#8888aa', marginBottom: 2 }}>Willkommen zurück 👋</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
                 </div>
 
                 {/* CREATOR PROFIL KARTE */}
-                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }} onClick={() => photoRef.current?.click()} title="Profilbild ändern">
                     {creator?.photo
                       ? <img src={creator.photo} alt={creator.name} style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover' }} />
@@ -418,25 +358,25 @@ export default function CreatorPortal() {
                   <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#111', marginBottom: 2 }}>{creator?.name}</div>
-                    <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{creator?.name}</div>
+                    <div style={{ fontSize: 11, color: '#8888aa', marginBottom: 6 }}>
                       {creator?.email}{creator?.age > 0 ? ` · ${creator.age}J` : ''}{creator?.country ? ` · ${FLAG[creator.country] || creator.country}` : ''}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                       {(creator?.tags || []).map((t: string) => (
-                        <span key={t} style={{ background: '#eff2ff', color: '#4f6ef7', border: '1px solid #d0d8ff', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>{t}</span>
+                        <span key={t} style={{ background: '#eff2ff', color: '#4f6ef7', border: '1px solid #d0d8ff', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>{t}</span>
                       ))}
                       {creator?.verguetung === 'provision' && creator?.provision && (
-                        <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% Provision</span>
+                        <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% Provision</span>
                       )}
                       {creator?.verguetung === 'fix' && creator?.fixbetrag && (
-                        <span style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>💶 {creator.fixbetrag}€ Fix</span>
+                        <span style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>💶 {creator.fixbetrag}€ Fix</span>
                       )}
                       {creator?.verguetung === 'beides' && (
-                        <span style={{ background: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% + 💶 {creator.fixbetrag}€</span>
+                        <span style={{ background: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% + 💶 {creator.fixbetrag}€</span>
                       )}
                       {creator?.kids && (creator?.kids_ages || []).map((a: string) => (
-                        <span key={a} style={{ background: '#f4f5f7', border: '1px solid #e8e8ec', borderRadius: 8, fontSize: 10, padding: '1px 7px' }}>👶 {a}J</span>
+                        <span key={a} style={{ background: '#f0f0f8', border: '1.5px solid #e8e8f0', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>👶 {a}J</span>
                       ))}
                     </div>
                   </div>
@@ -450,12 +390,12 @@ export default function CreatorPortal() {
                 </div>
 
                 {/* TABS */}
-                <div style={{ display: 'flex', borderBottom: '1px solid #e8e8ec', background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
+                <div style={{ display: 'flex', borderBottom: '1.5px solid #e8e8f0', background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
                   {TABS.map(t => (
                     <button key={t.key} className={`tab-btn${activeTab === t.key ? ' on' : ''}`} onClick={() => setActiveTab(t.key)}>
                       {t.icon} {t.label}
                       {uploads.filter(u => u.tab === t.key).length > 0 && (
-                        <span style={{ marginLeft: 4, fontSize: 10, background: '#f0f0f3', borderRadius: 8, padding: '1px 5px', color: '#666' }}>
+                        <span style={{ marginLeft: 4, fontSize: 10, background: '#f0f0f3', borderRadius: 12, padding: '1px 5px', color: '#666' }}>
                           {uploads.filter(u => u.tab === t.key).length}
                         </span>
                       )}
@@ -465,57 +405,36 @@ export default function CreatorPortal() {
 
                 {/* FILE GRID */}
                 {tabUploads.length === 0 ? (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center' }}>
+                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center' }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>{TABS.find(t => t.key === activeTab)?.icon}</div>
-                    <div style={{ fontSize: 13, marginBottom: 12, color: '#888' }}>Noch keine Inhalte in dieser Kategorie</div>
+                    <div style={{ fontSize: 13, marginBottom: 12, color: '#8888aa' }}>Noch keine Inhalte in dieser Kategorie</div>
                     <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>+ Hochladen</button>
                   </div>
                 ) : (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 14 }}>
+                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                       {tabUploads.map(u => (
-                        <div key={u.id}
-                          style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', transition: 'border-color .15s' }}
+                        <div key={u.id} onClick={() => handleCardClick(u)}
+                          style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
                           onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
                           onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
-                          {/* Thumbnail – klickbar für Lightbox */}
-                          <div onClick={() => handleCardClick(u)} style={{ cursor: 'pointer' }}>
-                            <div style={{ height: 100, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
-                              {u.mime_type?.startsWith('image/') && u.file_url
-                                ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
-                                : u.file_type === 'link' ? '🔗' : '📄'}
-                              {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
-                                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ padding: '8px 10px 4px' }}>
-                              <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
-                              {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
-                              {(u as any).product && <div style={{ fontSize: 10, color: '#888', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
-                              <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
-                              {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
-                            </div>
+                          <div style={{ height: 100, background: '#f0f0f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
+                            {u.mime_type?.startsWith('image/') && u.file_url
+                              ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
+                              : u.file_type === 'link' ? '🔗' : '📄'}
+                            {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
+                              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
+                              </div>
+                            )}
                           </div>
-                          {/* Kommentar-Button */}
-                          <div style={{ padding: '0 10px 10px' }}>
-                            <button
-                              onClick={e => { e.stopPropagation(); openComments(u) }}
-                              style={{
-                                width: '100%',
-                                background: (u.unread_comments ?? 0) > 0 ? '#4f6ef7' : '#f0f0f3',
-                                color: (u.unread_comments ?? 0) > 0 ? '#fff' : '#666',
-                                border: 'none', borderRadius: 6, padding: '5px 8px',
-                                fontSize: 10, cursor: 'pointer', fontFamily: 'inherit'
-                              }}>
-                              {(u.unread_comments ?? 0) > 0
-                                ? `💬 ${u.unread_comments} neue${u.unread_comments !== 1 ? '' : 'r'} Kommentar${u.unread_comments !== 1 ? 'e' : ''}`
-                                : (u.comments_total ?? 0) > 0
-                                  ? `💬 ${u.comments_total} Kommentar${(u.comments_total ?? 0) !== 1 ? 'e' : ''}`
-                                  : '💬 Kommentare'}
-                            </button>
+                          <div style={{ padding: '8px 10px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1a1a2e' }}>{u.file_name}</div>
+                            {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
+                            {(u as any).product && <div style={{ fontSize: 10, color: '#8888aa', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
+                            <div style={{ fontSize: 10, color: '#8888aa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
+                            {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
                           </div>
                         </div>
                       ))}
@@ -533,10 +452,10 @@ export default function CreatorPortal() {
             {/* ── UPLOAD ── */}
             {page === 'upload' && (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 16 }}>Inhalte hochladen</div>
-                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 4 }}>Datei hochladen</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Inhalte hochladen</div>
+                <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>Datei hochladen</div>
+                  <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 18 }}>Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.</div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <div>
@@ -570,7 +489,7 @@ export default function CreatorPortal() {
                     <input style={s.fi} value={uLink} onChange={e => setULink(e.target.value)} placeholder="https://drive.google.com/..." />
                   </div>
 
-                  <div style={{ border: '1.5px dashed #e8e8ec', borderRadius: 8, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14 }}
+                  <div style={{ border: '1.5px dashed #e8e8ec', borderRadius: 12, padding: 24, textAlign: 'center', cursor: 'pointer', background: '#f9f9fb', marginBottom: 14 }}
                     onClick={() => fileRef.current?.click()}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setUFile(f) }}>
@@ -578,8 +497,8 @@ export default function CreatorPortal() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
                         <span style={{ fontSize: 22 }}>{uFile.type.startsWith('image/') ? '🖼️' : '🎬'}</span>
                         <div style={{ textAlign: 'left' }}>
-                          <div style={{ fontSize: 12, fontWeight: 500, color: '#111' }}>{uFile.name}</div>
-                          <div style={{ fontSize: 10, color: '#888' }}>{fmtSize(uFile.size)}</div>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: '#1a1a2e' }}>{uFile.name}</div>
+                          <div style={{ fontSize: 10, color: '#8888aa' }}>{fmtSize(uFile.size)}</div>
                         </div>
                         <span style={{ marginLeft: 8, color: '#16a34a', fontSize: 18 }}>✓</span>
                       </div>
@@ -587,7 +506,7 @@ export default function CreatorPortal() {
                       <>
                         <div style={{ fontSize: 22, marginBottom: 6 }}>📂</div>
                         <div style={{ fontSize: 12, fontWeight: 500, color: '#555' }}>Klicken oder Datei hierher ziehen</div>
-                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>Bilder & Videos · optional wenn Link angegeben</div>
+                        <div style={{ fontSize: 11, color: '#8888aa', marginTop: 3 }}>Bilder & Videos · optional wenn Link angegeben</div>
                       </>
                     )}
                   </div>
@@ -608,12 +527,12 @@ export default function CreatorPortal() {
                 </div>
 
                 {uploads.length > 0 && (
-                  <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 18, marginTop: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 14 }}>Deine hochgeladenen Dateien ({uploads.length})</div>
+                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 18, marginTop: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 14 }}>Deine hochgeladenen Dateien ({uploads.length})</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                       {TABS.map(t => (
                         <button key={t.key}
-                          style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${uCategory === t.key ? '#111' : '#e8e8ec'}`, background: uCategory === t.key ? '#111' : '#fff', color: uCategory === t.key ? '#fff' : '#888', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ padding: '4px 10px', borderRadius: 10, border: `1px solid ${uCategory === t.key ? '#111' : '#e8e8ec'}`, background: uCategory === t.key ? '#111' : '#fff', color: uCategory === t.key ? '#fff' : '#888', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
                           onClick={() => setUCategory(t.key)}>
                           {t.icon} {t.label} ({uploads.filter(u => u.tab === t.key).length})
                         </button>
@@ -625,18 +544,18 @@ export default function CreatorPortal() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
                         {uploads.filter(u => u.tab === uCategory).map(u => (
                           <div key={u.id} onClick={() => handleCardClick(u)}
-                            style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
+                            style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
                             onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
                             onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
-                            <div style={{ height: 80, background: '#f4f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
+                            <div style={{ height: 80, background: '#f0f0f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                               {u.mime_type?.startsWith('image/') && u.file_url
                                 ? <img src={u.file_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
                                 : u.file_type === 'link' ? '🔗' : '📄'}
                             </div>
                             <div style={{ padding: '7px 9px' }}>
-                              <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#111' }}>{u.file_name}</div>
-                              <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>{fmtDate(u.created_at)}</div>
+                              <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1a1a2e' }}>{u.file_name}</div>
+                              <div style={{ fontSize: 10, color: '#8888aa', marginTop: 2 }}>{fmtDate(u.created_at)}</div>
                               {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>↗ Link öffnen</div>}
                             </div>
                           </div>
@@ -651,14 +570,14 @@ export default function CreatorPortal() {
             {/* ── TIPS ── */}
             {page === 'tips' && (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 6 }}>Tipps & Tricks</div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Klicke auf eine Kategorie.</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 6 }}>Tipps & Tricks</div>
+                <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 16 }}>Klicke auf eine Kategorie.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
                   {[{ id: 'briefings', icon: '📋', label: 'Briefings' }, { id: 'skripte', icon: '📝', label: 'Skripte' }, { id: 'lernvideos', icon: '🎬', label: 'Lernvideos' }].map(c => (
-                    <div key={c.id} style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 20, cursor: 'pointer', textAlign: 'center' }}
+                    <div key={c.id} style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 20, cursor: 'pointer', textAlign: 'center' }}
                       onClick={() => setPage(c.id as NavPage)}>
                       <div style={{ fontSize: 28, marginBottom: 8 }}>{c.icon}</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{c.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{c.label}</div>
                     </div>
                   ))}
                 </div>
@@ -670,11 +589,11 @@ export default function CreatorPortal() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <button onClick={() => setPage('tips')} style={s.btnGhost}>← Zurück</button>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>
                     {page === 'briefings' ? '📋 Briefings' : page === 'skripte' ? '📝 Skripte' : '🎬 Lernvideos'}
                   </div>
                 </div>
-                <div style={{ background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: 28, textAlign: 'center', color: '#aaa', fontSize: 13 }}>
+                <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 28, textAlign: 'center', color: '#aaa', fontSize: 13 }}>
                   Noch keine Inhalte vorhanden. Der Admin fügt diese hier ein.
                 </div>
               </>
@@ -685,7 +604,7 @@ export default function CreatorPortal() {
 
       {/* TOAST */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#fff', border: '1px solid #e8e8ec', borderLeft: '3px solid #16a34a', borderRadius: 8, padding: '10px 16px', fontSize: 13, zIndex: 9999, boxShadow: '0 2px 12px rgba(0,0,0,.1)', color: '#111' }}>
+        <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#fff', border: '1.5px solid #e8e8f0', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: '10px 16px', fontSize: 13, zIndex: 9999, boxShadow: '0 2px 12px rgba(0,0,0,.1)', color: '#1a1a2e' }}>
           {toast}
         </div>
       )}
@@ -698,8 +617,8 @@ export default function CreatorPortal() {
             {(() => {
               const isVideo = lightbox.file_type === 'video' || lightbox.mime_type?.startsWith('video/')
               const isImage = lightbox.file_type === 'image' || lightbox.mime_type?.startsWith('image/')
-              if (isImage) return <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8, objectFit: 'contain' }} />
-              if (isVideo) return <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 8 }} />
+              if (isImage) return <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain' }} />
+              if (isVideo) return <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12 }} />
               return <div style={{ color: '#fff', fontSize: 48 }}>📄</div>
             })()}
             <div style={{ textAlign: 'center' }}>
@@ -723,62 +642,33 @@ export default function CreatorPortal() {
           </div>
         </div>
       )}
-
-      {/* KOMMENTAR MODAL */}
-      {commentFile && (
-        <div onClick={() => setCommentFile(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 9997, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, padding: 20, width: '100%', maxWidth: 420, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 32px rgba(0,0,0,.2)' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: '#111' }}>💬 Kommentare – {commentFile.file_name}</div>
-            <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12, minHeight: 60 }}>
-              {comments.length === 0
-                ? <div style={{ fontSize: 12, color: '#aaa', padding: '8px 0' }}>Noch keine Kommentare.</div>
-                : comments.map((c, i) => (
-                  <div key={i} style={{ background: c.author_role === 'admin' ? '#eff2ff' : '#f4f5f7', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, color: '#888', marginBottom: 3 }}>{c.author_name} · {new Date(c.created_at).toLocaleString('de-DE')}</div>
-                    <div style={{ fontSize: 12, color: c.author_role === 'admin' ? '#4f6ef7' : '#111' }}>{c.message}</div>
-                  </div>
-                ))
-              }
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <textarea
-                value={commentText}
-                onChange={e => setCommentText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment() } }}
-                placeholder="Antwort schreiben..."
-                rows={2}
-                style={{ flex: 1, border: '1px solid #e8e8ec', borderRadius: 7, padding: '8px 10px', fontFamily: 'inherit', fontSize: 12, resize: 'none', outline: 'none' }} />
-              <button onClick={sendComment} disabled={commentLoading} style={{ ...s.btnP, alignSelf: 'flex-end', padding: '8px 14px' }}>
-                {commentLoading ? '...' : 'Senden'}
-              </button>
-            </div>
-            <button onClick={() => setCommentFile(null)} style={{ ...s.btnGhost, marginTop: 8, width: '100%' }}>Schließen</button>
-          </div>
-        </div>
-      )}
     </>
   )
 }
 
 const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:system-ui,sans-serif;font-size:13px;color:#111;}
-  .ni{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:#777;margin-bottom:1px;user-select:none;}
-  .ni:hover,.ni.on{background:#f0f0f3;color:#111;}
-  .ni.on{font-weight:500;}
-  .tab-btn{padding:8px 14px;border:none;background:none;cursor:pointer;font-size:12px;color:#777;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;}
-  .tab-btn.on{color:#111;font-weight:600;border-bottom-color:#111;}
-  .tab-btn:hover:not(.on){color:#444;}
+  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;color:#1a1a2e;background:#f0f0f8;}
+  .ni{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:500;color:#8888aa;margin-bottom:2px;user-select:none;transition:all .15s;}
+  .ni:hover{background:#f5f5fc;color:#1a1a2e;}
+  .ni.on{background:linear-gradient(135deg,rgba(79,110,247,.12),rgba(108,99,255,.08));color:#4f6ef7;font-weight:600;}
+  .ni-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:transparent;transition:all .18s;}
+  .ni.on .ni-ico{background:linear-gradient(135deg,#4f6ef7,#6c63ff);color:#fff;}
+  .tab-btn{padding:9px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#8888aa;border-bottom:2.5px solid transparent;font-family:inherit;white-space:nowrap;border-radius:8px 8px 0 0;transition:all .15s;}
+  .tab-btn.on{color:#4f6ef7;font-weight:700;border-bottom-color:#4f6ef7;background:rgba(79,110,247,.06);}
+  .tab-btn:hover:not(.on){color:#4f6ef7;background:rgba(79,110,247,.04);}
+  .cp-badge{background:rgba(79,110,247,.1);color:#4f6ef7;font-size:9px;font-weight:700;border-radius:20px;padding:2px 6px;margin-left:4px;vertical-align:middle;}
 `
 
 const s: Record<string, React.CSSProperties> = {
-  fl: { display: 'block', fontSize: 9, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 5 },
-  fi: { width: '100%', border: '1px solid #e8e8ec', borderRadius: 7, padding: '8px 10px', fontFamily: 'inherit', fontSize: 12, outline: 'none', background: '#fff', color: '#111' },
-  btnP: { background: '#111', color: '#fff', border: '1px solid #111', borderRadius: 8, padding: '10px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  btnGhost: { background: '#fff', border: '1px solid #e8e8ec', borderRadius: 7, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: '#666', fontFamily: 'inherit' },
-  sc: { background: '#fff', border: '1px solid #e8e8ec', borderRadius: 10, padding: '10px 14px' },
-  sl: { fontSize: 9, color: '#aaa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 },
-  sv: { fontSize: 22, fontWeight: 700, color: '#111' },
-  navLabel: { fontSize: 9, fontWeight: 600, color: '#bbb', textTransform: 'uppercase', letterSpacing: 1, padding: '0 6px', marginBottom: 5 },
-  errBox: { background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 7, padding: '8px 12px', fontSize: 12, color: '#dc2626', marginBottom: 14 },
+  fl: { display: 'block', fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 5 },
+  fi: { width: '100%', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '9px 12px', fontFamily: 'inherit', fontSize: 12, outline: 'none', background: '#fff', color: '#1a1a2e' },
+  btnP: { background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', color: '#fff', border: 'none', borderRadius: 14, padding: '10px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(79,110,247,.3)' },
+  btnGhost: { background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 9, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: '#8888aa', fontFamily: 'inherit', fontWeight: 500 },
+  sc: { background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '12px 16px' },
+  sl: { fontSize: 9, color: '#8888aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 },
+  sv: { fontSize: 22, fontWeight: 800, color: '#1a1a2e' },
+  navLabel: { fontSize: 9, fontWeight: 700, color: '#bbbbd0', textTransform: 'uppercase', letterSpacing: 1.2, padding: '0 8px', marginBottom: 4 },
+  errBox: { background: '#fff5f5', border: '1.5px solid #fecaca', borderRadius: 14, padding: '9px 14px', fontSize: 12, color: '#dc2626', marginBottom: 14 },
 }
