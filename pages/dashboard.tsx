@@ -132,7 +132,7 @@ body.dark .tag{background:rgba(79,110,247,.2);border-color:rgba(79,110,247,.3);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
 /* ── CREATOR DETAIL ── */
-.cdh{background:var(--surf);padding:16px 18px;margin-bottom:0;display:flex;align-items:center;gap:14px;}
+.cdh{background:var(--surf);padding:16px 18px;margin-bottom:0;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid var(--bdr);}
 .c-detail-top{
   position:sticky;
   top:58px;
@@ -145,10 +145,10 @@ body.dark .tag{background:rgba(79,110,247,.2);border-color:rgba(79,110,247,.3);}
   overflow:hidden;
 }
 .c-detail-top .tabs{
-  border-top:1px solid var(--bdr);
+  border-top:none;
   border-bottom:none;
   margin-bottom:0;
-  padding:0 6px;
+  padding:6px 10px 0;
   background:var(--surf);
 }
 .c-detail-top .tab{
@@ -515,7 +515,7 @@ const HTML = `
         <div class="tab" data-t="notizen">📝 Notizen & Vertrag</div>
       </div>
     </div>
-    <div id="c-tc" style="margin-top:16px"></div>
+    <div id="c-tc" style="margin-top:24px"></div>
   </div>
 </div>
 
