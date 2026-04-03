@@ -337,10 +337,10 @@ const HTML = `
 <!-- LEFT SIDEBAR -->
 <div class="sb" id="admin-sb">
   <div class="logo" id="logo-btn">
-    <img id="sb-logo" alt="Filapen" style="height:36px;width:auto;object-fit:contain;" />
+    <div class="logo-mark">F</div>
     <div class="logo-text">
       <div class="logo-name">Filapen</div>
-      <div class="logo-sub" style="margin-top:2px">Creator Hub</div>
+      <div class="logo-sub">Creator Hub</div>
     </div>
   </div>
     <div class="nav-s">
@@ -725,7 +725,6 @@ const HTML = `
 `;
 
 const JS = `
-var _LOGO_SRC='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAB9KADAAQAAAABAAAB9AAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgB9AH0AwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMAAQEBAQEBAgEBAgMCAgIDBAMDAwMEBgQEBAQEBgcGBgYGBgYHBwcHBwcHBwgICAgICAkJCQkJCwsLCwsLCwsLC//bAEMBAgICAwMDBQMDBQsIBggLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLC//dAAQAIP/aAAwDAQACEQMRAD8A/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9D/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//0f8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//S/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9P/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//1P8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//V/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9b/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//1/8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//Q/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9H/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//0v8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//T/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9T/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//1f8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//W/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9f/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//0P8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//R/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9L/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//0/8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//U/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9X/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//1v8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//X/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9D/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//0f8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//S/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9P/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//1P8AP/ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//V/wA/+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9b/AD/6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//2Q==';
 const G=id=>document.getElementById(id);
 const CL=['#6366f1','#ec4899','#06b6d4','#f97316','#84cc16','#f43f5e','#8b5cf6','#10b981'];
 const FL={DE:'🇩🇪',AT:'🇦🇹',CH:'🇨🇭',US:'🇺🇸',GB:'🇬🇧'};
@@ -733,7 +732,7 @@ let _id=1000;const uid=()=>++_id;
 function showT(m,dur=2600){const t=G('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
 
 const S={
-  page:'dashboard',dark:false,adminPhoto:null,adminName:'Admin',
+  page:'dashboard',dark:false,adminPhoto:null,adminName:'Admin',allUploads:[],
   modal:null,form:{},selRole:'read',selC:[],
   aC:null,aCT:'bilder',aF:null,aPJ:null,aPT:'bilder',aK:null,
   flt:{prods:[],tags:[],cid:null},search:'',
@@ -896,46 +895,94 @@ function rDash(){
   G('af-row').innerHTML=warnHtml;
   if(warnHtml){setTimeout(()=>{G('warn-dismiss')?.addEventListener('click',()=>{S._warnDismissed=true;G('warn-14d')?.remove();});},0);}
 
-  // ── ANALYTICS TABLE – alle Creator, Online oben
-  var anEl=G('analytics-section');
-  if(anEl){
-    // Eine Zeile pro Creator (nicht pro Datei)
-    var rows=S.creators.map(function(c){
-      // Neueste Datei finden
-      var allFiles=Object.values(c.flds).flat().reduce(function(acc,fld){return acc.concat(fld.files.map(function(f){return Object.assign({},f,{_fld:fld});}));}, []);
-      var latestFile=allFiles.length?allFiles[allFiles.length-1]:null;
-      var product=latestFile?(latestFile.product||latestFile._fld.prods[0]||'–'):'–';
-      var batch=latestFile?(latestFile.batch||latestFile._fld.batch||'–'):'–';
-      var online=allFiles.length>0;
-      var dateStr=latestFile&&latestFile._fld.date?new Date(latestFile._fld.date).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}):'–';
-      return {cid:c.id,cname:c.name,ccolor:c.color,cini:c.ini,cphoto:c.photo,product:product,batch:batch,online:online,dateStr:dateStr,fileCount:allFiles.length};
-    });
-    // Sortierung: Online (hat Uploads) oben, Offline unten
-    rows.sort(function(a,b){return (b.online?1:0)-(a.online?1:0);});
-    var tableRows=rows.map(function(r){
-      var av=r.cphoto?'<img src="'+r.cphoto+'" style="width:28px;height:28px;border-radius:8px;object-fit:cover">'
-        :'<div style="width:28px;height:28px;border-radius:8px;background:'+r.ccolor+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">'+r.cini+'</div>';
-      return '<div class="an-tr" style="grid-template-columns:2fr 1.5fr 1.5fr 1fr 1fr" data-an-cid="'+r.cid+'">'
-        +'<div style="display:flex;align-items:center;gap:8px">'+av+'<span style="font-size:12px;font-weight:600;color:#1a1a2e">'+r.cname+'</span></div>'
-        +'<div style="font-size:12px;color:var(--muted)">'+r.product+'</div>'
-        +'<div style="font-size:12px;color:var(--muted)">'+r.batch+'</div>'
-        +'<div><span class="status-dot '+(r.online?'status-on':'status-off')+'"><span class="dot '+(r.online?'dot-on':'dot-off')+'"></span>'+(r.online?'Online':'Offline')+'</span></div>'
-        +'<div style="font-size:11px;color:var(--muted)">'+r.dateStr+'</div>'
-        +'</div>';
-    }).join('');
-    anEl.innerHTML='<div class="analytics-card">'
-      +'<div class="analytics-hdr"><div class="analytics-title">📊 Analytics</div><span style="font-size:10px;color:var(--blue);cursor:pointer;font-weight:600" id="an-view-all">Alle Creator →</span></div>'
-      +'<div class="an-th" style="grid-template-columns:2fr 1.5fr 1.5fr 1fr 1fr"><div>Full Name</div><div>Produkt</div><div>Batch</div><div>Status</div><div>Online seit</div></div>'
-      +(rows.length?tableRows:'<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Noch keine Creator vorhanden</div>')
-      +'</div>';
-    anEl.querySelectorAll('[data-an-cid]').forEach(function(row){
-      row.addEventListener('click',function(){go('creators');setTimeout(function(){openC(row.dataset.anCid);},80);});
-    });
-    G('an-view-all')?.addEventListener('click',function(){go('creators');});
-  }
+  // ── ANALYTICS TABLE – direkt aus S.creators + S.allUploads
+  rAnalytics();
 
   // ── RIGHT SIDEBAR – CREATOR LIST
   rRightSidebar();
+}
+
+function rAnalytics(){
+  var anEl=G('analytics-section');
+  if(!anEl)return;
+
+  // Nur Creator MIT mindestens einem Upload anzeigen
+  var creatorsWithUploads=S.creators.filter(function(c){
+    return S.allUploads.some(function(u){return String(u.creator_id)===String(c.id);});
+  });
+
+  // Header immer rendern
+  var header='<div class="analytics-card">'
+    +'<div class="analytics-hdr"><div class="analytics-title">📊 Analytics</div>'
+    +'<span style="font-size:10px;color:var(--blue);cursor:pointer;font-weight:600" id="an-view-all">Alle Creator →</span></div>'
+    +'<div class="an-th" style="grid-template-columns:2fr 1.5fr 1.5fr 1fr 1fr">'
+    +'<div>Full Name</div><div>Produkt</div><div>Batch</div><div>Status</div><div>Online seit</div></div>';
+
+  if(!creatorsWithUploads.length){
+    anEl.innerHTML=header
+      +'<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Noch keine Uploads vorhanden</div></div>';
+    G('an-view-all')?.addEventListener('click',function(){go('creators');});
+    return;
+  }
+
+  var rows=creatorsWithUploads.map(function(c){
+    // Alle Uploads dieses Creators – nach created_at DESC sortiert
+    var uploads=S.allUploads.filter(function(u){return String(u.creator_id)===String(c.id);});
+
+    // Neuesten Upload mit uploaded_at bevorzugen (ist online)
+    var onlineUpload=uploads.find(function(u){return u.uploaded_at;});
+    var latest=onlineUpload||uploads[0];
+
+    // Felder direkt aus DB-Daten
+    var product=latest.product||null;
+    var batch=latest.batch||null;
+    var online=!!onlineUpload;
+    // uploaded_at = Datum wann Content live ging (vom Admin gesetzt)
+    var uploadedAt=onlineUpload?onlineUpload.uploaded_at:null;
+    var dateStr=uploadedAt
+      ?new Date(uploadedAt).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})
+      :null;
+
+    return {
+      cid:c.id,cname:c.name,ccolor:c.color,cini:c.ini,cphoto:c.photo,
+      product:product,batch:batch,online:online,dateStr:dateStr,count:uploads.length
+    };
+  });
+
+  // Online oben, dann alphabetisch
+  rows.sort(function(a,b){
+    if(b.online!==a.online)return (b.online?1:0)-(a.online?1:0);
+    return a.cname.localeCompare(b.cname);
+  });
+
+  var tableRows=rows.map(function(r){
+    var av=r.cphoto
+      ?'<img src="'+r.cphoto+'" style="width:28px;height:28px;border-radius:8px;object-fit:cover">'
+      :'<div style="width:28px;height:28px;border-radius:8px;background:'+r.ccolor
+        +';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">'+r.cini+'</div>';
+    return '<div class="an-tr" style="grid-template-columns:2fr 1.5fr 1.5fr 1fr 1fr" data-an-cid="'+r.cid+'">'
+      +'<div style="display:flex;align-items:center;gap:8px">'+av
+      +'<div><div style="font-size:12px;font-weight:600;color:#1a1a2e">'+r.cname+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+r.count+' Upload'+(r.count!==1?'s':'')+'</div>'
+      +'</div></div>'
+      +'<div style="font-size:12px;color:#1a1a2e">'+(r.product||'<span style="color:var(--muted)">–</span>')+'</div>'
+      +'<div style="font-size:12px;color:#1a1a2e">'+(r.batch||'<span style="color:var(--muted)">–</span>')+'</div>'
+      +'<div><span class="status-dot '+(r.online?'status-on':'status-off')+'">'
+      +'<span class="dot '+(r.online?'dot-on':'dot-off')+'"></span>'
+      +(r.online?'Online':'Offline')+'</span></div>'
+      +'<div style="font-size:11px;color:#1a1a2e">'+(r.dateStr||'<span style="color:var(--muted)">–</span>')+'</div>'
+      +'</div>';
+  }).join('');
+
+  anEl.innerHTML=header+tableRows+'</div>';
+
+  anEl.querySelectorAll('[data-an-cid]').forEach(function(row){
+    row.addEventListener('click',function(){
+      go('creators');
+      setTimeout(function(){openC(row.dataset.anCid);},80);
+    });
+  });
+  G('an-view-all')?.addEventListener('click',function(){go('creators');});
 }
 
 function rRightSidebar(){
@@ -1042,7 +1089,7 @@ function openC(id){
         let fld=c.flds[tab].find(f=>f.id==='__db_uploads__');
         if(!fld){fld={id:'__db_uploads__',name:'Uploads',batch:'Creator Upload',date:new Date().toISOString().slice(0,10),deadline:null,prods:[],tags:[],files:[]};c.flds[tab].unshift(fld);}
         if(!fld.files.find(f=>f.id===u.id)){
-          fld.files.push({id:u.id,name:u.file_name,type:(u.mime_type||'').startsWith('image/')?'image':(u.mime_type||'').startsWith('video/')?'video':'file',url:u.file_url,size:u.file_size?(u.file_size/1024/1024).toFixed(1)+' MB':'',uploadedAt:null,comments:[],r2Key:u.r2_key,mime_type:u.mime_type,batch:u.batch,product:u.product,label:u.name,creator_id:u.creator_id});
+          fld.files.push({id:u.id,name:u.file_name,type:(u.mime_type||'').startsWith('image/')?'image':(u.mime_type||'').startsWith('video/')?'video':'file',url:u.file_url,size:u.file_size?(u.file_size/1024/1024).toFixed(1)+' MB':'',uploadedAt:u.uploaded_at||null,comments:[],r2Key:u.r2_key,mime_type:u.mime_type,batch:u.batch,product:u.product,label:u.name,creator_id:u.creator_id});
         }
       });
       rCHdr();rCT(S.aCT);
@@ -1291,10 +1338,23 @@ document.addEventListener('click',e=>{
   }
   if(!e.target.closest('#up-menu'))G('up-menu').classList.remove('open');
 });
-G('up-ok').addEventListener('click',()=>{
-  const dateVal=G('up-date').value;if(!dateVal)return;
-  const fld=findFld(_upFldId);const file=fld?.files.find(x=>String(x.id)===String(_upFid));
-  if(file){file.uploadedAt=dateVal;rFiles(fld);showT('Upload-Datum gesetzt ✓');}
+G('up-ok').addEventListener('click',function(){
+  var dateVal=G('up-date').value;if(!dateVal)return;
+  var fld=findFld(_upFldId);var file=fld?.files.find(function(x){return String(x.id)===String(_upFid);});
+  if(file){
+    file.uploadedAt=dateVal;
+    rFiles(fld);
+    showT('Upload-Datum gesetzt ✓');
+    // In DB speichern
+    var _token=localStorage.getItem('token')||'';
+    fetch('/api/uploads',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_token},
+      body:JSON.stringify({uploadId:String(file.id),uploaded_at:dateVal})})
+      .catch(function(){});
+    // S.allUploads aktualisieren
+    var uIdx=S.allUploads.findIndex(function(u){return String(u.id)===String(file.id);});
+    if(uIdx>=0)S.allUploads[uIdx].uploaded_at=dateVal;
+    rAnalytics();
+  }
   G('up-menu').classList.remove('open');
 });
 G('up-cancel').addEventListener('click',()=>G('up-menu').classList.remove('open'));
@@ -1996,9 +2056,8 @@ window.rDash=rDash;window.rCreators=rCreators;window.rCInvite=rCInvite;
 window.openC=openC;window.go=go;window.rProdukte=rProdukte;window.rProjekte=rProjekte;
 window.rKat=rKat;window.rCT=rCT;window.rCHdr=rCHdr;
 window.rRightSidebar=rRightSidebar;
+window.rAnalytics=rAnalytics;
 
-// Logo einsetzen
-(function(){var lg=G('sb-logo');if(lg){lg.src=_LOGO_SRC;}})();
 go('dashboard');rFP();
 `;
 
@@ -2085,10 +2144,13 @@ export default function DashboardPage() {
         try { w.rDash() } catch(e) {}
       }).catch(() => {})
 
-    // Alle Uploads laden fuer Analytics
+    // Alle Uploads laden fuer Analytics – persistent in S.allUploads
     fetch('/api/uploads?creatorId=all', { headers: { 'Authorization': 'Bearer ' + token } })
       .then(r => r.json()).then((allUploads: any[]) => {
         if (!Array.isArray(allUploads) || !w.S) return
+        // In S.allUploads speichern (persistent, kein Rebuild nach Reload)
+        w.S.allUploads = allUploads
+        // Auch in Creator-flds einbauen für Datei-Ansicht
         allUploads.forEach((u: any) => {
           const cr = w.S.creators.find((x: any) => String(x.id) === String(u.creator_id))
           if (!cr) return
@@ -2103,11 +2165,12 @@ export default function DashboardPage() {
             fld.files.push({ id: u.id, name: u.file_name,
               type: (u.mime_type||'').startsWith('image/') ? 'image' : (u.mime_type||'').startsWith('video/') ? 'video' : 'file',
               url: u.file_url, size: u.file_size ? (u.file_size/1024/1024).toFixed(1)+' MB' : '',
-              uploadedAt: null, comments: [], r2Key: u.r2_key,
+              uploadedAt: u.uploaded_at || null, comments: [], r2Key: u.r2_key,
               mime_type: u.mime_type, batch: u.batch, product: u.product,
               label: u.name, creator_id: u.creator_id })
           }
         })
+        try { w.rAnalytics() } catch(e) {}
         try { w.rDash() } catch(e) {}
       }).catch(() => {})
 
