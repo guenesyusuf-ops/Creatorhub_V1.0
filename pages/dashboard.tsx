@@ -9,7 +9,8 @@ const CSS = `
   --blue:#4f6ef7;--blue2:#6c63ff;--grn:#16a34a;--red:#dc2626;--org:#ea580c;
   --hero1:#4f6ef7;--hero2:#6c63ff;--shadow:0 2px 12px rgba(79,110,247,.08);--shadow-md:0 4px 24px rgba(79,110,247,.13);
 }
-html{height:100%;overflow:hidden;}
+.dashboard-root{width:100vw;height:100vh;overflow:hidden;}
+@media(max-width:900px){.dashboard-root{height:auto;min-height:100vh;overflow:visible;}}
 body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;background:var(--bg);color:#1a1a2e;display:flex;width:100vw;height:100vh;overflow:hidden;margin:0;padding:0;}
 body.dark{--bdr:#2a2a3a;--bg:#0f0f1a;--surf:#1a1a2e;--lt:#22223a;--act:#2a2a40;--muted:#7070a0;color:#e8e8ff;}
 
@@ -2783,7 +2784,7 @@ export default function DashboardPage() {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </Head>
-      <div ref={ref} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
+      <div ref={ref} className="dashboard-root" />
     </>
   )
 }
