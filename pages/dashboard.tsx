@@ -339,6 +339,7 @@ body.dark .search-inp{color:#e8e8ff;}
 /* ── RESPONSIVE ── */
 @media(max-width:1200px){.right-sb{width:260px;min-width:260px;}}
 @media(max-width:1024px){.right-sb{display:none;}}
+
 @media(max-width:900px){
   /* Sidebar als Drawer - überlagert Content vollständig */
   .sb{
@@ -357,13 +358,27 @@ body.dark .search-inp{color:#e8e8ff;}
   .app-body{margin-left:0;}
   /* Overlay aktiv und klickbar */
   .sb-overlay{display:block;}
-  /* Rechte Sidebar ausblenden */
-  .right-sb{display:none;}
+  /* Rechte Sidebar auf Mobile unter Content */
+  .right-sb{
+    display:block;
+    width:100%;
+    min-width:unset;
+    border-left:none;
+    border-top:1.5px solid var(--bdr);
+    box-shadow:none;
+    height:auto;
+    overflow-y:visible;
+    padding:16px 14px;
+  }
+  #rsb-admin-info{display:none;}
+  #rsb-calendar{display:none;}
   /* Topbar kompakter */
   .topbar{padding:0 12px;height:50px;}
   .tb-t{font-size:13px;}
   /* Suchfeld auf Mobile ausblenden - spart Platz */
   .sw{display:none;}
+  .app-body{flex-direction:column;height:auto;overflow-y:auto;}
+  .main{min-height:0;}
 }
 @media(max-width:600px){
   .content{padding:10px;}
@@ -675,7 +690,7 @@ const HTML = `
 <!-- RIGHT SIDEBAR -->
 <div class="right-sb" id="right-sb">
   <!-- Admin Info -->
-  <div class="rsb-block">
+  <div class="rsb-block" id="rsb-admin-info">
     <div style="display:flex;align-items:center;gap:10px">
       <div id="rsb-av-wrap" style="width:40px;height:40px;border-radius:12px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--blue),var(--blue2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;box-shadow:0 3px 10px rgba(79,110,247,.3)">AD</div>
       <div>
@@ -686,7 +701,7 @@ const HTML = `
   </div>
 
   <!-- Calendar -->
-  <div class="rsb-block">
+  <div class="rsb-block" id="rsb-calendar">
     <div class="cal-nav">
       <button class="cal-btn" id="cal-prev">‹</button>
       <div class="cal-month" id="cal-month-label">April 2026</div>
