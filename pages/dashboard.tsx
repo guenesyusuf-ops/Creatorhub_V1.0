@@ -826,7 +826,13 @@ function rDash(){
   const tf=S.creators.reduce((s,c)=>s+Object.values(c.flds).flat().reduce((ss,f)=>ss+f.files.length,0),0);
 
   // ── HERO CARD
-  var adminName=S.adminName||G('sb-name')?.textContent||'Admin';
+  // Name aus localStorage 'user' laden (enthält echten Namen des eingeloggten Admins)
+  var _storedUser=localStorage.getItem('user');
+  var _parsedUser=_storedUser?JSON.parse(_storedUser):{};
+  var adminName=S.adminName||(_parsedUser.name?_parsedUser.name.split(' ')[0]:null)||G('sb-name')?.textContent||'Admin';
+  // Auch Sidebar und RSB aktualisieren
+  if(_parsedUser.name&&G('sb-name'))G('sb-name').textContent=_parsedUser.name.split(' ')[0];
+  if(_parsedUser.name&&G('rsb-name'))G('rsb-name').textContent=_parsedUser.name;
   var myQuotes=[
     'Ich habe Menschen gesehen die haben keine Klamotten, ich habe Klamotten gesehen da drin sind keine Menschen. — Aristoteles',
     'Der Wolf geht bei den Bergen und kommt wieder bei sein gleichen Platz. — Nietzsche',
