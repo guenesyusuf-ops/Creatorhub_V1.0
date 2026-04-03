@@ -356,9 +356,10 @@ body.dark .search-inp{color:#e8e8ff;}
   }
   /* App-body braucht kein margin-left auf Mobile */
   .app-body{margin-left:0;}
-  /* Overlay aktiv und klickbar */
-  .sb-overlay{display:block;}
-  /* Rechte Sidebar auf Mobile unter Content */
+  html,body{overflow:auto;height:auto;}
+  .app-body{flex-direction:column;height:auto;overflow:visible;}
+  .main{min-height:0;overflow:visible;}
+  .content{overflow:visible;}
   .right-sb{
     display:block;
     width:100%;
@@ -377,7 +378,6 @@ body.dark .search-inp{color:#e8e8ff;}
   .tb-t{font-size:13px;}
   /* Suchfeld auf Mobile ausblenden - spart Platz */
   .sw{display:none;}
-  .app-body{flex-direction:column;height:auto;overflow-y:auto;}
   .main{min-height:0;}
 }
 @media(max-width:600px){
