@@ -916,6 +916,7 @@ function lastUploadDays(c){
 
 function rDash(){
   const tf=S.creators.reduce((s,c)=>s+Object.values(c.flds).flat().reduce((ss,f)=>ss+f.files.length,0),0);
+  const crWithUpload=S.creators.filter(c=>S.allUploads.some(u=>String(u.creator_id)===String(c.id))).length;
 
   // ── HERO CARD
   // Name aus localStorage 'user' laden (enthält echten Namen des eingeloggten Admins)
@@ -972,13 +973,43 @@ function rDash(){
       <div class="sc-icon" style="background:linear-gradient(135deg,#fff7ed,#ffedd5)">▤</div>
       <div class="sl">Projekte</div><div class="sv">\${S.projekte.length}</div>
     </div>
-    <div class="sc">
+    <div class="sc" id="ds-u" style="cursor:pointer">
       <div class="sc-icon" style="background:linear-gradient(135deg,#fdf2f8,#fce7f3)">⬆</div>
-      <div class="sl">Uploads</div><div class="sv">\${tf}</div>
+      <div class="sl">Uploads</div>
+      <div class="sv">\${tf}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">\${crWithUpload} von \${S.creators.length} Creator</div>
     </div>\`;
   G('ds-c')?.addEventListener('click',()=>go('creators'));
   G('ds-p')?.addEventListener('click',()=>go('produkte'));
   G('ds-pj')?.addEventListener('click',()=>go('projekte'));
+  G('ds-u')?.addEventListener('click',function(){
+    var noUpload=S.creators.filter(function(c){
+      return !S.allUploads.some(function(u){return String(u.creator_id)===String(c.id);});
+    });
+    if(!noUpload.length){showT('🎉 Alle Creator haben bereits hochgeladen!');return;}
+    var listHtml=noUpload.map(function(c){
+      var av=c.photo
+        ?'<img src="'+c.photo+'" style="width:32px;height:32px;border-radius:8px;object-fit:cover">'
+        :'<div style="width:32px;height:32px;border-radius:8px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">'+c.ini+'</div>';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr)">'
+        +av
+        +'<div><div style="font-size:13px;font-weight:600;color:#1a1a2e">'+c.name+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">'+(c.email||'Kein Upload')+'</div></div>'
+        +'</div>';
+    }).join('');
+    var modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(6px);z-index:600;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML='<div style="background:#fff;border-radius:18px;padding:24px;width:420px;max-width:94vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+      +'<div style="font-size:15px;font-weight:700;color:#1a1a2e">Creator ohne Upload</div>'
+      +'<div style="font-size:12px;color:var(--muted)">'+noUpload.length+' von '+S.creators.length+'</div></div>'
+      +listHtml
+      +'<button id="no-up-close" style="width:100%;margin-top:16px;padding:10px;background:linear-gradient(135deg,#4f6ef7,#6c63ff);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">Schließen</button>'
+      +'</div>';
+    document.body.appendChild(modal);
+    modal.querySelector('#no-up-close').addEventListener('click',function(){modal.remove();});
+    modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+  });
 
   // ── LATE CONTENT WARNING
   const late=S.creators.filter(c=>{const d=lastUploadDays(c);return d!==null&&d>=14;});
