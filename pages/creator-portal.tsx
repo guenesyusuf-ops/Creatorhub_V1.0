@@ -326,10 +326,20 @@ export default function CreatorPortal() {
                 <div className="ni-ico">{n.icon}</div>{n.label}
               </div>
             ))}
-            <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid #e8e8f0' }}>
-              <div style={{ fontSize: 10, color: '#8888aa', padding: '0 6px' }}>
-                {totalUploads} Datei{totalUploads !== 1 ? 'en' : ''} hochgeladen
+            <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid #e8e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, background: '#f5f5fc', marginBottom: 6 }}>
+                {creator?.photo
+                  ? <img src={creator.photo} alt="" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: 28, height: 28, borderRadius: 7, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                      {creator?.initials || creator?.name?.slice(0,2).toUpperCase()}
+                    </div>
+                }
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#1a1a2e' }}>{creator?.name}</div>
+                  <div style={{ fontSize: 9, color: '#8888aa' }}>Creator</div>
+                </div>
               </div>
+              <button onClick={logout} style={{ ...s.btnGhost, width: '100%', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>⏻ Abmelden</button>
             </div>
           </div>
 
@@ -339,24 +349,24 @@ export default function CreatorPortal() {
             {/* ── HOME ── */}
             {page === 'home' && (
               <>
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: '#8888aa', marginBottom: 2 }}>Willkommen zurück 👋</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
+                {/* HERO */}
+                <div style={{ background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', borderRadius: 16, padding: '20px 24px', marginBottom: 18, color: '#fff' }}>
+                  <div style={{ fontSize: 11, opacity: .8, marginBottom: 4 }}>Willkommen zurück 👋</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.4px' }}>Hallo {creator?.name?.split(' ')[0]}, schön dass du da bist!</div>
                 </div>
 
                 {/* CREATOR PROFIL KARTE */}
-                <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 16, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }} onClick={() => photoRef.current?.click()} title="Profilbild ändern">
                     {creator?.photo
-                      ? <img src={creator.photo} alt={creator.name} style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover' }} />
-                      : <div style={{ width: 54, height: 54, borderRadius: '50%', background: creator?.color_from || '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                      ? <img src={creator.photo} alt={creator.name} style={{ width: 56, height: 56, borderRadius: 14, objectFit: 'cover' }} />
+                      : <div style={{ width: 56, height: 56, borderRadius: 14, background: creator?.color_from || '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff' }}>
                           {creator?.initials || creator?.name?.slice(0, 2).toUpperCase()}
                         </div>
                     }
-                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderRadius: '50%', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', border: '2px solid #fff' }}>✏️</div>
+                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderRadius: '50%', background: '#4f6ef7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', border: '2px solid #fff' }}>✏</div>
                   </div>
                   <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
-
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{creator?.name}</div>
                     <div style={{ fontSize: 11, color: '#8888aa', marginBottom: 6 }}>
@@ -364,88 +374,95 @@ export default function CreatorPortal() {
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                       {(creator?.tags || []).map((t: string) => (
-                        <span key={t} style={{ background: '#eff2ff', color: '#4f6ef7', border: '1px solid #d0d8ff', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>{t}</span>
+                        <span key={t} style={{ background: '#eff2ff', color: '#4f6ef7', border: '1px solid #d0d8ff', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>{t}</span>
                       ))}
                       {creator?.verguetung === 'provision' && creator?.provision && (
-                        <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% Provision</span>
+                        <span style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>📊 {creator.provision}% Provision</span>
                       )}
                       {creator?.verguetung === 'fix' && creator?.fixbetrag && (
-                        <span style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>💶 {creator.fixbetrag}€ Fix</span>
+                        <span style={{ background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>💶 {creator.fixbetrag}€ Fix</span>
                       )}
                       {creator?.verguetung === 'beides' && (
-                        <span style={{ background: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>📊 {creator.provision}% + 💶 {creator.fixbetrag}€</span>
+                        <span style={{ background: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>📊 {creator.provision}% + 💶 {creator.fixbetrag}€</span>
                       )}
                       {creator?.kids && (creator?.kids_ages || []).map((a: string) => (
-                        <span key={a} style={{ background: '#f0f0f8', border: '1.5px solid #e8e8f0', borderRadius: 12, fontSize: 10, padding: '1px 7px' }}>👶 {a}J</span>
+                        <span key={a} style={{ background: '#f0f0f8', border: '1.5px solid #e8e8f0', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>👶 {a}J</span>
                       ))}
                     </div>
                   </div>
                 </div>
 
                 {/* STATS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 18 }}>
-                  <div style={s.sc}><div style={s.sl}>Kategorien</div><div style={s.sv}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div></div>
-                  <div style={s.sc}><div style={s.sl}>Dateien gesamt</div><div style={s.sv}>{totalUploads}</div></div>
-                  <div style={s.sc}><div style={s.sl}>Hochgeladen</div><div style={{ ...s.sv, color: '#16a34a' }}>{totalUploads}</div></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
+                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Kategorien</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div>
+                  </div>
+                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Dateien gesamt</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{totalUploads}</div>
+                  </div>
+                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Hochgeladen</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#16a34a' }}>{totalUploads}</div>
+                  </div>
                 </div>
 
-                {/* TABS */}
-                <div style={{ display: 'flex', borderBottom: '1.5px solid #e8e8f0', background: '#fff', borderRadius: '8px 8px 0 0', padding: '0 4px' }}>
-                  {TABS.map(t => (
-                    <button key={t.key} className={`tab-btn${activeTab === t.key ? ' on' : ''}`} onClick={() => setActiveTab(t.key)}>
-                      {t.icon} {t.label}
-                      {uploads.filter(u => u.tab === t.key).length > 0 && (
-                        <span style={{ marginLeft: 4, fontSize: 10, background: '#f0f0f3', borderRadius: 12, padding: '1px 5px', color: '#666' }}>
-                          {uploads.filter(u => u.tab === t.key).length}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {/* FILE GRID */}
-                {tabUploads.length === 0 ? (
-                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 32, textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>{TABS.find(t => t.key === activeTab)?.icon}</div>
-                    <div style={{ fontSize: 13, marginBottom: 12, color: '#8888aa' }}>Noch keine Inhalte in dieser Kategorie</div>
+                {/* TABS + FILE GRID in gemeinsamer Card */}
+                <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 16, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', borderBottom: '1.5px solid #e8e8f0', padding: '0 6px' }}>
+                    {TABS.map(t => (
+                      <button key={t.key} className={`tab-btn${activeTab === t.key ? ' on' : ''}`} onClick={() => setActiveTab(t.key)}>
+                        {t.icon} {t.label}
+                        {uploads.filter(u => u.tab === t.key).length > 0 && (
+                          <span className="cp-badge">{uploads.filter(u => u.tab === t.key).length}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    {tabUploads.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: 32 }}>
+                        <div style={{ fontSize: 28, marginBottom: 8 }}>{TABS.find(t => t.key === activeTab)?.icon}</div>
+                        <div style={{ fontSize: 13, marginBottom: 14, color: '#8888aa' }}>Noch keine Inhalte in dieser Kategorie</div>
                     <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>+ Hochladen</button>
                   </div>
                 ) : (
-                  <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: 14 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
-                      {tabUploads.map(u => (
-                        <div key={u.id} onClick={() => handleCardClick(u)}
-                          style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
-                          <div style={{ height: 100, background: '#f0f0f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
-                            {u.mime_type?.startsWith('image/') && u.file_url
-                              ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
-                              : u.file_type === 'link' ? '🔗' : '📄'}
-                            {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
-                              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ padding: '8px 10px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1a1a2e' }}>{u.file_name}</div>
-                            {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
-                            {(u as any).product && <div style={{ fontSize: 10, color: '#8888aa', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
-                            <div style={{ fontSize: 10, color: '#8888aa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
-                            {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
-                          </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+                    {tabUploads.map(u => (
+                      <div key={u.id} onClick={() => handleCardClick(u)}
+                        style={{ background: '#f5f5fc', border: '1.5px solid #e8e8f0', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = '#4f6ef7')}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8f0')}>
+                        <div style={{ height: 100, background: '#e8e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', position: 'relative' }}>
+                          {u.mime_type?.startsWith('image/') && u.file_url
+                            ? <img src={u.file_url} alt={u.file_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
+                            : u.file_type === 'link' ? '🔗' : '📄'}
+                          {(u.file_type === 'video' || u.mime_type?.startsWith('video/')) && (
+                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>▶</div>
+                            </div>
+                          )}
                         </div>
-                      ))}
-                      <div style={{ border: '1.5px dashed #e8e8ec', borderRadius: 9, minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: '#aaa' }}
-                        onClick={() => { setUCategory(activeTab); setPage('upload') }}>
-                        <div style={{ fontSize: 18 }}>+</div>
-                        <span style={{ fontSize: 10, fontWeight: 500 }}>Hochladen</span>
+                        <div style={{ padding: '8px 10px' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1a1a2e' }}>{u.file_name}</div>
+                          {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
+                          {(u as any).product && <div style={{ fontSize: 10, color: '#8888aa', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
+                          <div style={{ fontSize: 10, color: '#8888aa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
+                          {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
+                        </div>
                       </div>
+                    ))}
+                    <div style={{ border: '1.5px dashed #c7d0ff', borderRadius: 12, minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', background: '#fafbff' }}
+                      onClick={() => { setUCategory(activeTab); setPage('upload') }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18 }}>+</div>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: '#8888aa' }}>Hochladen</span>
                     </div>
                   </div>
                 )}
+                  </div>
+                </div>
               </>
             )}
 
