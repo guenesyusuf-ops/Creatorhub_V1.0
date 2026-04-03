@@ -1791,7 +1791,7 @@ function openM(type,extra){
           <label class="fl">Fixbetrag €</label>
           <input class="fi" id="m-verg-fix" type="number" value="\${c?.fixbetrag||\'\'}" placeholder="z.B. 500">
         </div>
-      </div>\\`;
+      </div>\`;
     setTimeout(function(){
       var kidsChk=G('m-kids');var kidsExtra=G('m-kids-extra');
       if(kidsChk&&kidsExtra){kidsChk.addEventListener('change',function(){kidsExtra.style.display=this.checked?'block':'none';});}
