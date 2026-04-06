@@ -824,6 +824,24 @@ const HTML = `
 </div>
 
 <div class="toast" id="toast"></div>
+<!-- COPYWRITER MODAL -->
+<div id="cw-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:800;overflow-y:auto;padding:24px 16px">
+  <div style="background:var(--surf);border-radius:20px;max-width:820px;margin:0 auto;padding:28px 24px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <button id="cw-close" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font-size:17px;font-weight:800;color:#1a1a2e;margin-bottom:3px">✍️ Filapen Copywriter</div>
+      <div style="font-size:12px;color:var(--muted)">Generiere hochperformante Meta Ads Copy mit fortgeschrittenen Copywriting-Prinzipien</div>
+    </div>
+    <div id="cw-form" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div id="cw-result" style="display:none;margin-top:18px">
+      <div style="font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px">🎯 Generierte Ad-Copy</div>
+      <div id="cw-output" style="background:var(--lt);border:1.5px solid var(--bdr);border-radius:14px;padding:18px;font-size:13px;line-height:1.9;white-space:pre-wrap;color:#1a1a2e;max-height:500px;overflow-y:auto"></div>
+      <button id="cw-copy-btn" class="btn btn-p" style="width:100%;margin-top:10px">📋 In Zwischenablage kopieren</button>
+    </div>
+    <button id="cw-generate" class="btn btn-p" style="width:100%;margin-top:14px;font-size:14px;padding:13px 0">⚡ Headlines &amp; Copy generieren</button>
+  </div>
+</div>
+
 `;
 
 const JS = `
@@ -2632,7 +2650,231 @@ G('cal-next')?.addEventListener('click',function(){_calMonth++;if(_calMonth>11){
 renderCalendar();
 
 // ── TOOLS
-G('tool-headline')?.addEventListener('click',function(){showT('Headline Generator – kommt bald!');});
+G('tool-headline')?.addEventListener('click',function(){
+  var sc='background:var(--surf);border:1.5px solid var(--bdr);border-radius:14px;padding:16px';
+  var fi='width:100%;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:12px;color:#1a1a2e;background:#fff;outline:none';
+  var fl='display:block;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px';
+  var g2='display:grid;grid-template-columns:1fr 1fr;gap:8px';
+  var g3='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px';
+  var h='';
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:10px">📄 Produkt & Zielgruppe</div>';
+  h+='<label style="'+fl+'">Produktname & Beschreibung</label>';
+  h+='<textarea id="cw-produkt" rows="3" style="'+fi+';resize:vertical;margin-bottom:10px" placeholder="z.B. Premium Fitness-App mit personalisierten Trainingsplänen..."></textarea>';
+  h+='<div style="'+g3+'">';
+  h+='<div><label style="'+fl+'">Geschlecht</label><select id="cw-gschl" style="'+fi+'"><option>Beides</option><option>Männlich</option><option>Weiblich</option></select></div>';
+  h+='<div><label style="'+fl+'">Alter von</label><input id="cw-altv" type="number" placeholder="18" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Alter bis</label><input id="cw-altb" type="number" placeholder="45" style="'+fi+'"></div>';
+  h+='</div>';
+  h+='<label style="'+fl+';margin-top:8px">Interessen</label>';
+  h+='<input id="cw-int" style="'+fi+'" placeholder="z.B. Fitness, Gesundheit, Ernährung">';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:10px">🧠 Marktpsychologie</div>';
+  h+='<label style="'+fl+'">Market Awareness</label>';
+  h+='<select id="cw-aware" style="'+fi+';margin-bottom:8px"><option value="">Bitte wählen...</option>';
+  h+='<option>Kennt unser Produkt</option>';
+  h+='<option>Lösungsbewusst – er weiß, dass er das Produkt will, aber nicht, dass es existiert</option>';
+  h+='<option>Problembewusst – kennt das Problem, aber nicht das Produkt</option>';
+  h+='<option>Unwissend – nutze Identifikation, um den Markt zu erreichen</option>';
+  h+='</select>';
+  h+='<label style="'+fl+'">Market Sophistication</label>';
+  h+='<select id="cw-soph" style="'+fi+'"><option value="">Bitte wählen...</option>';
+  h+='<option>Stufe 1 – Erster auf dem Markt, direktes Bedürfnis</option>';
+  h+='<option>Stufe 2 – Zweiter auf dem Markt, Konkurrenz übertreffen</option>';
+  h+='<option>Stufe 3 – Kunde kennt alles, neuer Mechanismus nötig</option>';
+  h+='<option>Stufe 4 – Konkurrenz kopiert uns, Mechanismus verbessern</option>';
+  h+='<option>Stufe 5 – Markt glaubt nicht mehr an Werbung, Fokus auf Identität</option>';
+  h+='</select>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:10px">🏆 Endergebnisse</div>';
+  h+='<div style="'+g3+'">';
+  h+='<div><label style="'+fl+'">Ergebnis 1</label><input id="cw-e1" style="'+fi+'" placeholder="z.B. 10kg in 8 Wochen"></div>';
+  h+='<div><label style="'+fl+'">Ergebnis 2</label><input id="cw-e2" style="'+fi+'" placeholder="Mehr Energie"></div>';
+  h+='<div><label style="'+fl+'">Ergebnis 3</label><input id="cw-e3" style="'+fi+'" placeholder="Langfristige Gesundheit"></div>';
+  h+='</div>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:10px">⚙️ Features & Benefits</div>';
+  h+='<div style="'+g2+';margin-bottom:8px">';
+  h+='<div><label style="'+fl+'">Feature 1</label><input id="cw-f1" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Feature 2</label><input id="cw-f2" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Feature 3</label><input id="cw-f3" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Feature 4</label><input id="cw-f4" style="'+fi+'"></div>';
+  h+='</div>';
+  h+='<div style="'+g2+'">';
+  h+='<div><label style="'+fl+'">Benefit 1</label><input id="cw-b1" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Benefit 2</label><input id="cw-b2" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Benefit 3</label><input id="cw-b3" style="'+fi+'"></div>';
+  h+='<div><label style="'+fl+'">Benefit 4</label><input id="cw-b4" style="'+fi+'"></div>';
+  h+='</div>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:8px">🪝 Hook-Mechanik <span style="font-size:10px;font-weight:400;color:var(--muted)">(Mehrfachauswahl)</span></div>';
+  h+='<div style="'+g2+'">';
+  var hooks=['Neugier (Curiosity)','Contrarian (gegen den Strom)','Pain-Point direkt','Ergebnis-getrieben','Story / Pattern Interrupt','Zahlen / Beweis'];
+  var hookIcos=['🧲','🔁','😣','🏆','📖','🔢'];
+  for(var hi=0;hi<hooks.length;hi++){
+    h+='<label style="display:flex;align-items:center;gap:7px;border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">';
+    h+='<input type="checkbox" class="cw-hook" value="'+hooks[hi]+'" style="width:14px;height:14px"> '+hookIcos[hi]+' '+hooks[hi];
+    h+='</label>';
+  }
+  h+='</div></div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:4px">⚡ Unique Mechanism</div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px">DER Gamechanger – was macht dein Produkt anders als alle anderen?</div>';
+  h+='<label style="'+fl+'">Dein Unique Mechanism</label>';
+  h+='<input id="cw-mech" style="'+fi+';margin-bottom:8px" placeholder="z.B. Mit unserer 3-Phasen Risk-Engine">';
+  h+='<label style="'+fl+'">Art des Mechanismus</label>';
+  h+='<select id="cw-mecha" style="'+fi+';margin-bottom:8px"><option value="">Bitte wählen...</option>';
+  h+='<option>Eigene Methode / Formel</option><option>System / Framework</option>';
+  h+='<option>Technologie / Patentierte Lösung</option><option>Strategie / Ansatz</option><option>Inhaltsstoff / Material</option>';
+  h+='</select>';
+  h+='<label style="'+fl+'">Beschreibung (optional)</label>';
+  h+='<textarea id="cw-mechd" rows="2" style="'+fi+';resize:vertical" placeholder="Wie funktioniert dein Mechanismus?"></textarea>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:4px">🧲 Desired Identity</div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Welche Identität kauft sich der Kunde mit?</div>';
+  h+='<input id="cw-id1" style="'+fi+';margin-bottom:6px" placeholder="z.B. Ich bin eine gute Mutter / ein guter Vater">';
+  h+='<input id="cw-id2" style="'+fi+';margin-bottom:6px" placeholder="z.B. Ich fördere mein Kind richtig">';
+  h+='<input id="cw-id3" style="'+fi+'" placeholder="z.B. Mein Kind ist vorbereitet für die Schule">';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:8px">🎯 Kampagnen-Einstellungen</div>';
+  h+='<div style="'+g2+';margin-bottom:8px">';
+  h+='<div><label style="'+fl+'">Anzeige-Art</label><select id="cw-az" style="'+fi+'"><option>Bild</option><option>Video</option><option>Carousel</option><option>Story</option><option>Reels</option></select></div>';
+  h+='<div><label style="'+fl+'">Funnel-Level</label><select id="cw-fl" style="'+fi+'"><option>Cold</option><option>Warm</option><option>Retargeting</option></select></div>';
+  h+='<div><label style="'+fl+'">Werbeziel 1</label><select id="cw-wz1" style="'+fi+'"><option>Leads</option><option>Käufe</option><option>Traffic</option><option>Awareness</option></select></div>';
+  h+='<div><label style="'+fl+'">Werbeziel 2</label><select id="cw-wz2" style="'+fi+'"><option>-</option><option>Leads</option><option>Käufe</option><option>Traffic</option></select></div>';
+  h+='</div>';
+  h+='<label style="'+fl+'">Tonalität</label>';
+  h+='<select id="cw-ton" style="'+fi+';max-width:50%"><option>Professionell / Duz-Form</option><option>Locker / Freundschaftlich</option>';
+  h+='<option>Emotional / Storytelling</option><option>Direkt / Aggressiv</option><option>Humorvoll</option><option>Luxuriös / Premium</option></select>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:8px">🔍 Konkurrenz-Analyse</div>';
+  h+='<label style="'+fl+'">Konkurrenz Ad 1 (aus Meta Ads Library)</label>';
+  h+='<textarea id="cw-k1" rows="3" style="'+fi+';resize:vertical;margin-bottom:8px" placeholder="Text der Konkurrenz-Ad hier einfügen..."></textarea>';
+  h+='<label style="'+fl+'">Konkurrenz Ad 2 (optional)</label>';
+  h+='<textarea id="cw-k2" rows="2" style="'+fi+';resize:vertical;margin-bottom:8px"></textarea>';
+  h+='<label style="'+fl+'">Konkurrenz Ad 3 (optional)</label>';
+  h+='<textarea id="cw-k3" rows="2" style="'+fi+';resize:vertical"></textarea>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 Marktanalyse & Kundenumfrage</div>';
+  h+='<label style="'+fl+'">Marktanalyse</label>';
+  h+='<textarea id="cw-ma" rows="3" style="'+fi+';resize:vertical;margin-bottom:8px" placeholder="Marktanalyse hier einfügen..."></textarea>';
+  h+='<label style="'+fl+'">Kundenumfrage</label>';
+  h+='<textarea id="cw-ku" rows="3" style="'+fi+';resize:vertical" placeholder="Kundenumfrage hier einfügen..."></textarea>';
+  h+='</div>';
+
+  h+='<div style="'+sc+'">';
+  h+='<div style="font-size:12px;font-weight:700;margin-bottom:8px">📤 Output & Anforderungen</div>';
+  h+='<div style="'+g3+';margin-bottom:10px">';
+  h+='<div><label style="'+fl+'">Varianten</label><select id="cw-var" style="'+fi+'"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></div>';
+  h+='<div><label style="'+fl+'">Primärtexte</label><select id="cw-vp" style="'+fi+'"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></div>';
+  h+='<div><label style="'+fl+'">CTAs</label><select id="cw-vc" style="'+fi+'"><option>1</option><option>2</option><option selected>3</option></select></div>';
+  h+='</div>';
+  h+='<label style="'+fl+'">Anforderungen Headline</label>';
+  h+='<input id="cw-rh" style="'+fi+';margin-bottom:6px" value="1 Headline (max. 110 Zeichen, mit starker Hook)">';
+  h+='<label style="'+fl+'">Anforderungen Primärtext</label>';
+  h+='<input id="cw-rp" style="'+fi+';margin-bottom:6px" value="Ein Text pro Absatz, max. 32–40 Zeichen, vor jedem Absatz ein passendes Emoji">';
+  h+='<label style="'+fl+'">Anforderungen CTA</label>';
+  h+='<input id="cw-rc" style="'+fi+'" value="Zielgerichtet, keine generischen wie Klick hier">';
+  h+='</div>';
+
+  G('cw-form').innerHTML=h;
+  G('cw-bg').style.display='block';
+  G('cw-result').style.display='none';
+  document.body.style.overflow='hidden';
+});
+
+// Close modal
+document.addEventListener('click',function(e){
+  var t=e.target as HTMLElement;
+  if(t===G('cw-bg')||t.id==='cw-close'){
+    G('cw-bg').style.display='none';
+    document.body.style.overflow='';
+  }
+  if(t.id==='cw-copy-btn'){
+    var txt=G('cw-output')?.textContent||'';
+    navigator.clipboard.writeText(txt).then(function(){showT('✓ In Zwischenablage kopiert');});
+  }
+});
+
+// Generate
+document.addEventListener('click',function(e){
+  if((e.target as HTMLElement)?.id!=='cw-generate')return;
+  var btn=G('cw-generate') as HTMLButtonElement;
+  if(btn.disabled)return;
+  btn.disabled=true;
+  btn.textContent='⏳ Wird generiert...';
+  G('cw-result').style.display='none';
+
+  var selectedHooks=Array.from(document.querySelectorAll('.cw-hook:checked')).map(function(c){return (c as HTMLInputElement).value;});
+  var body={
+    produkt:(G('cw-produkt') as HTMLTextAreaElement)?.value||'',
+    geschlecht:(G('cw-gschl') as HTMLSelectElement)?.value||'Beides',
+    alterVon:(G('cw-altv') as HTMLInputElement)?.value||'',
+    alterBis:(G('cw-altb') as HTMLInputElement)?.value||'',
+    interessen:(G('cw-int') as HTMLInputElement)?.value||'',
+    awareness:(G('cw-aware') as HTMLSelectElement)?.value||'',
+    sophistication:(G('cw-soph') as HTMLSelectElement)?.value||'',
+    ergebnis1:(G('cw-e1') as HTMLInputElement)?.value||'',
+    ergebnis2:(G('cw-e2') as HTMLInputElement)?.value||'',
+    ergebnis3:(G('cw-e3') as HTMLInputElement)?.value||'',
+    features:[(G('cw-f1') as HTMLInputElement)?.value,(G('cw-f2') as HTMLInputElement)?.value,(G('cw-f3') as HTMLInputElement)?.value,(G('cw-f4') as HTMLInputElement)?.value],
+    benefits:[(G('cw-b1') as HTMLInputElement)?.value,(G('cw-b2') as HTMLInputElement)?.value,(G('cw-b3') as HTMLInputElement)?.value,(G('cw-b4') as HTMLInputElement)?.value],
+    hooks:selectedHooks,
+    mechanismus:(G('cw-mech') as HTMLInputElement)?.value||'',
+    mechanismusArt:(G('cw-mecha') as HTMLSelectElement)?.value||'',
+    mechanismusBeschreibung:(G('cw-mechd') as HTMLTextAreaElement)?.value||'',
+    identities:[(G('cw-id1') as HTMLInputElement)?.value,(G('cw-id2') as HTMLInputElement)?.value,(G('cw-id3') as HTMLInputElement)?.value],
+    anzeigeArt:(G('cw-az') as HTMLSelectElement)?.value||'',
+    funnelLevel:(G('cw-fl') as HTMLSelectElement)?.value||'',
+    werbeziel1:(G('cw-wz1') as HTMLSelectElement)?.value||'',
+    werbeziel2:(G('cw-wz2') as HTMLSelectElement)?.value||'',
+    tonalitaet:(G('cw-ton') as HTMLSelectElement)?.value||'',
+    konkurrenz1:(G('cw-k1') as HTMLTextAreaElement)?.value||'',
+    konkurrenz2:(G('cw-k2') as HTMLTextAreaElement)?.value||'',
+    konkurrenz3:(G('cw-k3') as HTMLTextAreaElement)?.value||'',
+    marktanalyse:(G('cw-ma') as HTMLTextAreaElement)?.value||'',
+    kundenumfrage:(G('cw-ku') as HTMLTextAreaElement)?.value||'',
+    variantenAnzahl:parseInt((G('cw-var') as HTMLSelectElement)?.value||'3'),
+    reqHeadline:(G('cw-rh') as HTMLInputElement)?.value||'',
+    reqPrimaer:(G('cw-rp') as HTMLInputElement)?.value||'',
+    reqCta:(G('cw-rc') as HTMLInputElement)?.value||'',
+  };
+
+  var token=localStorage.getItem('token')||'';
+  fetch('/api/copywriter',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(data){
+    btn.disabled=false;
+    btn.textContent='⚡ Headlines & Copy generieren';
+    if(data.error){showT('Fehler: '+data.error);return;}
+    G('cw-output').textContent=data.result||'';
+    G('cw-result').style.display='block';
+    G('cw-result').scrollIntoView({behavior:'smooth'});
+  }).catch(function(err){
+    btn.disabled=false;
+    btn.textContent='⚡ Headlines & Copy generieren';
+    showT('Netzwerkfehler: '+err.message);
+  });
+});
 G('tool-skript')?.addEventListener('click',function(){showT('Skript Generator – kommt bald!');});
 G('tool-konkurrenz')?.addEventListener('click',function(){showT('Konkurrenz Analyse – kommt bald!');});
 
