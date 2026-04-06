@@ -2710,10 +2710,24 @@ G('tool-headline')?.addEventListener('click',function(){
       <div class="sc" style="padding:16px">
         <div style="font-size:13px;font-weight:700;margin-bottom:8px">🪝 Hook-Mechanik <span style="font-size:10px;font-weight:400;color:var(--muted)">(Mehrfachauswahl)</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="cw-hooks-grid">
-          ${['🧲 Neugier (Curiosity)','🔁 Contrarian (gegen den Strom)','😣 Pain-Point direkt','🏆 Ergebnis-getrieben','📖 Story / Pattern Interrupt','🔢 Zahlen / Beweis'].map(h=>`
           <label style="display:flex;align-items:center;gap:8px;border:0.5px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
-            <input type="checkbox" value="${h}" style="width:14px;height:14px"> ${h}
-          </label>`).join('')}
+            <input type="checkbox" value="Neugier (Curiosity)" style="width:14px;height:14px"> 🧲 Neugier (Curiosity)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;border:0.5px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+            <input type="checkbox" value="Contrarian (gegen den Strom)" style="width:14px;height:14px"> 🔁 Contrarian (gegen den Strom)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;border:0.5px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+            <input type="checkbox" value="Pain-Point direkt" style="width:14px;height:14px"> 😣 Pain-Point direkt
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;border:0.5px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+            <input type="checkbox" value="Ergebnis-getrieben" style="width:14px;height:14px"> 🏆 Ergebnis-getrieben
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;border:0.5px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+            <input type="checkbox" value="Story / Pattern Interrupt" style="width:14px;height:14px"> 📖 Story / Pattern Interrupt
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;border:0.5px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px">
+            <input type="checkbox" value="Zahlen / Beweis" style="width:14px;height:14px"> 🔢 Zahlen / Beweis
+          </label>
         </div>
       </div>
       <div class="sc" style="padding:16px">
