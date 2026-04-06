@@ -824,40 +824,6 @@ const HTML = `
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="cw-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;overflow-y:auto;padding:24px">
-  <div style="background:#fff;border-radius:16px;max-width:600px;margin:0 auto;padding:24px;position:relative">
-    <button onclick="G(\'cw-bg\').style.display=\'none\';document.body.style.overflow=\'\'" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;cursor:pointer">✕</button>
-    <div style="font-size:15px;font-weight:800;color:#1a1a2e;margin-bottom:16px">✍️ Headline Generator</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div><label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:4px">PRODUKT</label><textarea id="cw-produkt" rows="2" style="width:100%;border:1.5px solid #e8e8f0;border-radius:8px;padding:8px;font-size:13px;font-family:inherit;resize:vertical" placeholder="z.B. 3D Stift mit magischer Tinte"></textarea></div>
-      <div><label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:4px">ZIELGRUPPE</label><input id="cw-ziel" style="width:100%;border:1.5px solid #e8e8f0;border-radius:8px;padding:8px;font-size:13px;font-family:inherit" placeholder="z.B. Eltern, 25-45 Jahre"></div>
-      <div><label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:4px">MARKET AWARENESS</label>
-        <select id="cw-aware" style="width:100%;border:1.5px solid #e8e8f0;border-radius:8px;padding:8px;font-size:13px;font-family:inherit">
-          <option value="">Bitte wählen...</option>
-          <option>Kennt unser Produkt</option>
-          <option>Lösungsbewusst</option>
-          <option>Problembewusst</option>
-          <option>Unwissend</option>
-        </select>
-      </div>
-      <div><label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:4px">MARKET SOPHISTICATION</label>
-        <select id="cw-soph" style="width:100%;border:1.5px solid #e8e8f0;border-radius:8px;padding:8px;font-size:13px;font-family:inherit">
-          <option value="">Bitte wählen...</option>
-          <option>Stufe 1 – Erster auf dem Markt</option>
-          <option>Stufe 2 – Konkurrenz übertreffen</option>
-          <option>Stufe 3 – Neuer Mechanismus nötig</option>
-          <option>Stufe 4 – Mechanismus verbessern</option>
-          <option>Stufe 5 – Fokus auf Identität</option>
-        </select>
-      </div>
-      <div><label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:4px">MARKTANALYSE</label><textarea id="cw-ma" rows="3" style="width:100%;border:1.5px solid #e8e8f0;border-radius:8px;padding:8px;font-size:13px;font-family:inherit;resize:vertical" placeholder="Füge hier deine Marktanalyse ein..."></textarea></div>
-      <div><label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:4px">KUNDENUMFRAGE</label><textarea id="cw-ku" rows="3" style="width:100%;border:1.5px solid #e8e8f0;border-radius:8px;padding:8px;font-size:13px;font-family:inherit;resize:vertical" placeholder="Füge hier deine Kundenumfrage ein..."></textarea></div>
-      <button id="cw-gen-btn" style="width:100%;padding:12px;background:linear-gradient(135deg,#4f6ef7,#6c63ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">⚡ Headlines generieren</button>
-      <div id="cw-out" style="display:none;background:#f5f5fc;border-radius:10px;padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:#1a1a2e;max-height:400px;overflow-y:auto"></div>
-      <button id="cw-copy" style="display:none;width:100%;padding:10px;background:#fff;border:1.5px solid #e8e8f0;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📋 Kopieren</button>
-    </div>
-  </div>
-</div>
 `;
 
 const JS = `
@@ -889,9 +855,9 @@ const S={
 
 let _confirmCB=null;
 function askConfirm(msg,cb){_confirmCB=cb;G('confirm-title').textContent=msg;G('confirm-bg').style.display='flex';}
-G('confirm-ok')?.addEventListener('click',()=>{G('confirm-bg').style.display='none';if(_confirmCB){_confirmCB();_confirmCB=null;}});
-G('confirm-cancel')?.addEventListener('click',()=>{G('confirm-bg').style.display='none';_confirmCB=null;});
-G('confirm-bg')?.addEventListener('click',e=>{if(e.target===G('confirm-bg')){G('confirm-bg').style.display='none';_confirmCB=null;}});
+G('confirm-ok').addEventListener('click',()=>{G('confirm-bg').style.display='none';if(_confirmCB){_confirmCB();_confirmCB=null;}});
+G('confirm-cancel').addEventListener('click',()=>{G('confirm-bg').style.display='none';_confirmCB=null;});
+G('confirm-bg').addEventListener('click',e=>{if(e.target===G('confirm-bg')){G('confirm-bg').style.display='none';_confirmCB=null;}});
 
 let _eC=null,_dC=null,_pC=null;
 function showDot(btn,eC,dC,pC){
@@ -904,9 +870,9 @@ function showDot(btn,eC,dC,pC){
   G('drop-menu').style.left=Math.max(4,r.right-140)+'px';
 }
 function hideDot(){G('drop-menu').classList.remove('open');_eC=null;_dC=null;_pC=null;}
-G('dm-edit')?.addEventListener('click',()=>{if(_eC)_eC();hideDot();});
-G('dm-del')?.addEventListener('click',()=>{if(_dC)_dC();hideDot();});
-G('dm-portal')?.addEventListener('click',()=>{if(_pC)_pC();hideDot();});
+G('dm-edit').addEventListener('click',()=>{if(_eC)_eC();hideDot();});
+G('dm-del').addEventListener('click',()=>{if(_dC)_dC();hideDot();});
+G('dm-portal').addEventListener('click',()=>{if(_pC)_pC();hideDot();});
 
 function go(p){
   S.page=p;
@@ -1310,7 +1276,7 @@ function rCHdr(){
       <div style="text-align:center"><strong style="display:block;font-size:14px;font-weight:700">\${tf}</strong><span style="font-size:9px;color:#aaa">Dateien</span></div>
     </div>
     <button class="dot-btn" id="chdr-dot">···</button>\`;
-  G('chdr-dot')?.addEventListener('click',e=>{e.stopPropagation();showDot(e.currentTarget,()=>openM('editC',c.id),()=>delC(c.id,c.name),()=>openPortal(c.id));});
+  G('chdr-dot').addEventListener('click',e=>{e.stopPropagation();showDot(e.currentTarget,()=>openM('editC',c.id),()=>delC(c.id,c.name),()=>openPortal(c.id));});
 }
 
 function rCT(tab){
@@ -1368,8 +1334,8 @@ function rCT(tab){
           <button class="btn btn-p" style="width:100%" id="verg-save">Vergütung speichern</button>
         </div>
       </div>\`;
-    G('notiz-save')?.addEventListener('click',()=>{c.notizen=G('notiz-inp').value;c.notizenCreator=G('notiz-creator-inp').value;showT('Notizen gespeichert ✓');});
-    G('verg-save')?.addEventListener('click',()=>{c.verguetung=G('verg-model').value;c.provision=G('verg-prov')?.value||'';c.fixbetrag=G('verg-fix')?.value||'';rCHdr();showT('Vergütung gespeichert ✓');});
+    G('notiz-save').addEventListener('click',()=>{c.notizen=G('notiz-inp').value;c.notizenCreator=G('notiz-creator-inp').value;showT('Notizen gespeichert ✓');});
+    G('verg-save').addEventListener('click',()=>{c.verguetung=G('verg-model').value;c.provision=G('verg-prov')?.value||'';c.fixbetrag=G('verg-fix')?.value||'';rCHdr();showT('Vergütung gespeichert ✓');});
     // Vertrags-Upload
     if(!c.vertraege)c.vertraege=[];
     G('vertrag-inp')?.addEventListener('change',function(){
@@ -1500,12 +1466,12 @@ function openFld(fid,tab){
       <button class="btn btn-sm" style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.3)" id="bulk-cancel">Abbrechen</button>
     </div>
     <div class="file-grid" id="ff-grid"></div>\`;
-  G('bk-fld')?.addEventListener('click',()=>{S.aF=null;rCT(S.aCT);});
-  G('fhdr-dot')?.addEventListener('click',e=>{e.stopPropagation();showDot(e.currentTarget,()=>openM('editFld',{id:fid,tab}),()=>delFld(fid,tab,fld.name));});
-  G('bulk-toggle')?.addEventListener('click',()=>{S.bulkMode=!S.bulkMode;S.bulkSel=[];G('bulk-bar').classList.toggle('on',S.bulkMode);G('bulk-toggle').textContent=S.bulkMode?'☑ Auswahl':'☐ Auswahl';rFiles(fld);});
-  G('bulk-cancel')?.addEventListener('click',()=>{S.bulkMode=false;S.bulkSel=[];G('bulk-bar').classList.remove('on');G('bulk-toggle').textContent='☐ Auswahl';rFiles(fld);});
-  G('bulk-upload')?.addEventListener('click',()=>{const today=new Date().toISOString().slice(0,10);S.bulkSel.forEach(id=>{const f=fld.files.find(x=>x.id===id);if(f)f.uploadedAt=today;});S.bulkSel=[];rFiles(fld);showT('✓ Als hochgeladen markiert');});
-  G('bulk-del')?.addEventListener('click',()=>{askConfirm(\`\${S.bulkSel.length} Dateien löschen?\`,()=>{fld.files=fld.files.filter(f=>!S.bulkSel.includes(f.id));S.bulkSel=[];rFiles(fld);rCHdr();showT('Gelöscht');});});
+  G('bk-fld').addEventListener('click',()=>{S.aF=null;rCT(S.aCT);});
+  G('fhdr-dot').addEventListener('click',e=>{e.stopPropagation();showDot(e.currentTarget,()=>openM('editFld',{id:fid,tab}),()=>delFld(fid,tab,fld.name));});
+  G('bulk-toggle').addEventListener('click',()=>{S.bulkMode=!S.bulkMode;S.bulkSel=[];G('bulk-bar').classList.toggle('on',S.bulkMode);G('bulk-toggle').textContent=S.bulkMode?'☑ Auswahl':'☐ Auswahl';rFiles(fld);});
+  G('bulk-cancel').addEventListener('click',()=>{S.bulkMode=false;S.bulkSel=[];G('bulk-bar').classList.remove('on');G('bulk-toggle').textContent='☐ Auswahl';rFiles(fld);});
+  G('bulk-upload').addEventListener('click',()=>{const today=new Date().toISOString().slice(0,10);S.bulkSel.forEach(id=>{const f=fld.files.find(x=>x.id===id);if(f)f.uploadedAt=today;});S.bulkSel=[];rFiles(fld);showT('✓ Als hochgeladen markiert');});
+  G('bulk-del').addEventListener('click',()=>{askConfirm(\`\${S.bulkSel.length} Dateien löschen?\`,()=>{fld.files=fld.files.filter(f=>!S.bulkSel.includes(f.id));S.bulkSel=[];rFiles(fld);rCHdr();showT('Gelöscht');});});
   rFiles(fld);
   // Ungelesene Kommentare für jede Datei laden (read_by_admin=false)
   var _adminToken=localStorage.getItem('token')||'';
@@ -1626,7 +1592,7 @@ document.addEventListener('click',e=>{
   }
   if(!e.target.closest('#up-menu'))G('up-menu').classList.remove('open');
 });
-G('up-ok')?.addEventListener('click',function(){
+G('up-ok').addEventListener('click',function(){
   var dateVal=G('up-date').value;if(!dateVal)return;
   var fld=findFld(_upFldId);var file=fld?.files.find(function(x){return String(x.id)===String(_upFid);});
   if(file){
@@ -1645,10 +1611,10 @@ G('up-ok')?.addEventListener('click',function(){
   }
   G('up-menu').classList.remove('open');
 });
-G('up-cancel')?.addEventListener('click',()=>G('up-menu').classList.remove('open'));
+G('up-cancel').addEventListener('click',()=>G('up-menu').classList.remove('open'));
 
 // ── COMMENT SEND ── ORIGINAL VERSION
-G('lb-comment-send')?.addEventListener('click',function(){
+G('lb-comment-send').addEventListener('click',function(){
   var txt=G('lb-comment-inp').value.trim();if(!txt)return;
   if(!S.activeLbFile)return;
   var _lbToken=localStorage.getItem('token')||'';
@@ -1663,7 +1629,7 @@ G('lb-comment-send')?.addEventListener('click',function(){
       showT('Kommentar gespeichert \u2713');
     }).catch(function(){showT('Fehler beim Senden');});
 });
-G('lb-comment-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G('lb-comment-send').click();}});
+G('lb-comment-inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();G('lb-comment-send').click();}});
 
 function delFile(fid,fldId){
   const fileObj=(()=>{for(const t of Object.keys(S.aC?.flds||{})){const f=S.aC.flds[t].find(x=>String(x.id)===String(fldId));if(f){return f.files.find(x=>x.id===fid)||null;}}return null;})();
@@ -1692,7 +1658,7 @@ function backC(){S.aC=null;showCL();G('tb-t').textContent='Creator';rCreators();
 
 function openSearch(){G('search-overlay').classList.add('open');setTimeout(()=>G('search-real').focus(),50);}
 function closeSearch(){G('search-overlay').classList.remove('open');G('search-real').value='';}
-G('search-real')?.addEventListener('input',function(e){
+G('search-real').addEventListener('input',function(e){
   var q=e.target.value.toLowerCase().trim();
   if(!q){G('search-results').innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">Tippe um zu suchen…</div>';return;}
   var results=[];
@@ -1750,7 +1716,7 @@ G('search-real')?.addEventListener('input',function(e){
   });
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSearch();});
-G('search-overlay')?.addEventListener('click',e=>{if(e.target===G('search-overlay'))closeSearch();});
+G('search-overlay').addEventListener('click',e=>{if(e.target===G('search-overlay'))closeSearch();});
 
 function rProdukte(){
   let h=S.produkte.map(p=>\`<div class="pcard">
@@ -2038,7 +2004,7 @@ function openPortalFolderFiles(fld,creator){
     html+='</div>';
     main.innerHTML=html;
 
-    G('portal-bk-fld')?.addEventListener('click',function(){renderPortalPage('home');});
+    G('portal-bk-fld').addEventListener('click',function(){renderPortalPage('home');});
     main.querySelectorAll('[data-pcomm-idx]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var idx=+btn.dataset.pcommIdx;
@@ -2243,8 +2209,8 @@ function openM(type,extra){
       <input type="file" id="m-uf" accept="*/*" style="display:none">
       <div id="m-prog" style="display:none"><div id="m-ps" style="font-size:10px;margin-bottom:3px">Upload...</div><div class="prog-track"><div class="prog-fill" id="m-pb"></div></div></div>
       <div class="fg" style="margin-top:9px"><label class="fl">Oder Link</label><input class="fi" id="m-ul" placeholder="https://drive.google.com/..."></div>\`;
-    G('m-dz')?.addEventListener('click',()=>G('m-uf').click());
-    G('m-uf')?.addEventListener('change',()=>{if(G('m-uf').files[0])hFP(G('m-uf').files[0]);});
+    G('m-dz').addEventListener('click',()=>G('m-uf').click());
+    G('m-uf').addEventListener('change',()=>{if(G('m-uf').files[0])hFP(G('m-uf').files[0]);});
   }
   else if(type==='addP'||type==='editP'){
     const isE=type==='editP';const prod=isE?S.produkte.find(p=>p.id===extra):null;if(isE)S.form.pid=extra;
@@ -2493,18 +2459,18 @@ function saveAppData(key,value){
 }
 
 // ── STATIC LISTENERS
-G('logo-btn')?.addEventListener('click',()=>go('dashboard'));
-G('user-btn')?.addEventListener('click',()=>go('einst'));
+G('logo-btn').addEventListener('click',()=>go('dashboard'));
+G('user-btn').addEventListener('click',()=>go('einst'));
 ['dashboard','creators','produkte','projekte','kategorien','team','einst'].forEach(p=>G('ni-'+p)?.addEventListener('click',()=>go(p)));
-G('ni-c-invite')?.addEventListener('click',()=>go('c-invite'));
-G('ni-content-hub')?.addEventListener('click',()=>go('content-hub'));
-G('btn-add-c')?.addEventListener('click',()=>openM('addC'));
-G('btn-add-p')?.addEventListener('click',()=>openM('addP'));
-G('btn-add-pj')?.addEventListener('click',()=>openM('addPJ'));
-G('btn-add-k')?.addEventListener('click',()=>openM('addK'));
-G('btn-invite')?.addEventListener('click',()=>openM('invite'));
-G('btn-add-tag')?.addEventListener('click',()=>{const v=G('new-tag').value.trim();if(!v||S.tags.includes(v))return;S.tags.push(v);G('new-tag').value='';rTags();showT(\`"\${v}" hinzugefügt\`);});
-G('s-save')?.addEventListener('click',()=>{
+G('ni-c-invite').addEventListener('click',()=>go('c-invite'));
+G('ni-content-hub').addEventListener('click',()=>go('content-hub'));
+G('btn-add-c').addEventListener('click',()=>openM('addC'));
+G('btn-add-p').addEventListener('click',()=>openM('addP'));
+G('btn-add-pj').addEventListener('click',()=>openM('addPJ'));
+G('btn-add-k').addEventListener('click',()=>openM('addK'));
+G('btn-invite').addEventListener('click',()=>openM('invite'));
+G('btn-add-tag').addEventListener('click',()=>{const v=G('new-tag').value.trim();if(!v||S.tags.includes(v))return;S.tags.push(v);G('new-tag').value='';rTags();showT(\`"\${v}" hinzugefügt\`);});
+G('s-save').addEventListener('click',()=>{
   var n=G('s-name').value.trim()||'Admin';
   S.adminName=n;
   localStorage.setItem('admin_name',n);
@@ -2538,27 +2504,27 @@ function applyAdminPhoto(photo){
   var savedName=localStorage.getItem('admin_name');
   if(savedName){S.adminName=savedName;if(G('sb-name'))G('sb-name').textContent=savedName.split(' ')[0];if(G('rsb-name'))G('rsb-name').textContent=savedName;}
 })();
-G('pw-save')?.addEventListener('click',()=>{const c=G('pw-c').value,n=G('pw-n').value,k=G('pw-k').value;if(!c||!n||!k)return showT('Alle Felder ausfüllen');if(n.length<8)return showT('Min. 8 Zeichen');if(n!==k)return showT('Stimmen nicht überein');['pw-c','pw-n','pw-k'].forEach(id=>G(id).value='');showT('Passwort geändert ✓');});
-G('dark-tgl')?.addEventListener('click',()=>{S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);G('dark-tgl').classList.toggle('on',S.dark);});
-G('modal-cancel')?.addEventListener('click',closeM);
-G('modal-bg')?.addEventListener('click',e=>{if(e.target===G('modal-bg'))closeM();});
-G('lb-x')?.addEventListener('click',closeLB);
-G('lb-close')?.addEventListener('click',closeLB);
-G('lb')?.addEventListener('click',e=>{if(e.target===G('lb'))closeLB();});
-G('bk-c')?.addEventListener('click',backC);
-G('bk-pj')?.addEventListener('click',backPJ);
-G('bk-k')?.addEventListener('click',backK);
+G('pw-save').addEventListener('click',()=>{const c=G('pw-c').value,n=G('pw-n').value,k=G('pw-k').value;if(!c||!n||!k)return showT('Alle Felder ausfüllen');if(n.length<8)return showT('Min. 8 Zeichen');if(n!==k)return showT('Stimmen nicht überein');['pw-c','pw-n','pw-k'].forEach(id=>G(id).value='');showT('Passwort geändert ✓');});
+G('dark-tgl').addEventListener('click',()=>{S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);G('dark-tgl').classList.toggle('on',S.dark);});
+G('modal-cancel').addEventListener('click',closeM);
+G('modal-bg').addEventListener('click',e=>{if(e.target===G('modal-bg'))closeM();});
+G('lb-x').addEventListener('click',closeLB);
+G('lb-close').addEventListener('click',closeLB);
+G('lb').addEventListener('click',e=>{if(e.target===G('lb'))closeLB();});
+G('bk-c').addEventListener('click',backC);
+G('bk-pj').addEventListener('click',backPJ);
+G('bk-k').addEventListener('click',backK);
 G('c-tabs').querySelectorAll('.tab').forEach(tab=>{tab.addEventListener('click',()=>{G('c-tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));tab.classList.add('on');S.aCT=tab.dataset.t;rCT(tab.dataset.t);});});
 G('pj-tabs').querySelectorAll('.tab').forEach(tab=>{tab.addEventListener('click',()=>{G('pj-tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));tab.classList.add('on');S.aPT=tab.dataset.t;rPJT(tab.dataset.t);});});
-G('fp-btn')?.addEventListener('click',()=>{G('fp-panel').classList.toggle('open');if(G('fp-panel').classList.contains('open'))rFP();});
-G('fp-close')?.addEventListener('click',()=>G('fp-panel').classList.remove('open'));
-G('fp-apply')?.addEventListener('click',()=>{rDash();G('fp-panel').classList.remove('open');});
-G('fp-reset')?.addEventListener('click',()=>{S.flt={prods:[],tags:[],cid:null};rFP();rDash();G('fp-panel').classList.remove('open');});
-G('fp-cs')?.addEventListener('input',e=>rFpC(e.target.value));
-G('close-portal')?.addEventListener('click',()=>G('creator-portal').classList.remove('open'));
-G('open-portal-preview')?.addEventListener('click',()=>{if(S.creators.length)openPortal(S.creators[0].id);else showT('Kein Creator vorhanden');});
+G('fp-btn').addEventListener('click',()=>{G('fp-panel').classList.toggle('open');if(G('fp-panel').classList.contains('open'))rFP();});
+G('fp-close').addEventListener('click',()=>G('fp-panel').classList.remove('open'));
+G('fp-apply').addEventListener('click',()=>{rDash();G('fp-panel').classList.remove('open');});
+G('fp-reset').addEventListener('click',()=>{S.flt={prods:[],tags:[],cid:null};rFP();rDash();G('fp-panel').classList.remove('open');});
+G('fp-cs').addEventListener('input',e=>rFpC(e.target.value));
+G('close-portal').addEventListener('click',()=>G('creator-portal').classList.remove('open'));
+G('open-portal-preview').addEventListener('click',()=>{if(S.creators.length)openPortal(S.creators[0].id);else showT('Kein Creator vorhanden');});
 G('creator-portal').querySelectorAll('.ni[id^="pni-"]').forEach(n=>{n.addEventListener('click',()=>renderPortalPage(n.id.replace('pni-','')));});
-G('ci-send')?.addEventListener('click',async()=>{
+G('ci-send').addEventListener('click',async()=>{
   const cid=G('ci-sel').value;if(!cid)return showT('Bitte Creator wählen');
   const c=S.creators.find(x=>String(x.id)===String(cid));if(!c)return;
   const email=c.email||G('ci-email').value.trim();if(!email||!email.includes('@'))return showT('E-Mail erforderlich');
@@ -2666,42 +2632,7 @@ G('cal-next')?.addEventListener('click',function(){_calMonth++;if(_calMonth>11){
 renderCalendar();
 
 // ── TOOLS
-G('tool-headline')?.addEventListener('click',function(){
-  G('cw-bg').style.display='block';
-  document.body.style.overflow='hidden';
-});
-G('cw-bg')?.addEventListener('click',function(e){
-  if(e.target===G('cw-bg')){G('cw-bg').style.display='none';document.body.style.overflow='';}
-});
-G('cw-gen-btn')?.addEventListener('click',function(){
-  var btn=G('cw-gen-btn') as HTMLButtonElement;
-  btn.textContent='⏳ Wird generiert...';
-  btn.disabled=true;
-  var token=localStorage.getItem('token')||'';
-  fetch('/api/copywriter',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-    body:JSON.stringify({
-      produkt:(G('cw-produkt') as HTMLTextAreaElement).value,
-      interessen:(G('cw-ziel') as HTMLInputElement).value,
-      awareness:(G('cw-aware') as HTMLSelectElement).value,
-      sophistication:(G('cw-soph') as HTMLSelectElement).value,
-      marktanalyse:(G('cw-ma') as HTMLTextAreaElement).value,
-      kundenumfrage:(G('cw-ku') as HTMLTextAreaElement).value,
-      variantenAnzahl:3
-    })
-  }).then(function(r){return r.json();}).then(function(d){
-    btn.textContent='⚡ Headlines generieren';
-    btn.disabled=false;
-    if(d.error){showT('Fehler: '+d.error);return;}
-    G('cw-out').textContent=d.result||'';
-    G('cw-out').style.display='block';
-    G('cw-copy').style.display='block';
-  }).catch(function(){btn.textContent='⚡ Headlines generieren';btn.disabled=false;});
-});
-G('cw-copy')?.addEventListener('click',function(){
-  navigator.clipboard.writeText(G('cw-out')?.textContent||'').then(function(){showT('✓ Kopiert');});
-});
+G('tool-headline')?.addEventListener('click',function(){showT('Headline Generator – kommt bald!');});
 G('tool-skript')?.addEventListener('click',function(){showT('Skript Generator – kommt bald!');});
 G('tool-konkurrenz')?.addEventListener('click',function(){showT('Konkurrenz Analyse – kommt bald!');});
 
