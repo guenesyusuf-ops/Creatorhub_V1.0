@@ -192,7 +192,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;font-size:13px;background:var(--
 .av{width:34px;height:34px;border-radius:9px;background:rgba(129,140,248,.1);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--violet2);flex-shrink:0;border:1.5px solid rgba(129,140,248,.3);overflow:hidden;}
 .av img{width:100%;height:100%;object-fit:cover;}
 .user-info{flex:1;min-width:0;}
-.user-name{font-size:12px;font-weight:600;color:#f0f2ff;}
+.user-name{font-size:12px;font-weight:600;color:var(--ink);}
 
 .user-role{font-size:10px;color:var(--muted);}
 .logout-btn-sb{margin-top:6px;width:100%;background:transparent;border:1.5px solid var(--bdr);border-radius:10px;padding:8px 0;font-size:11.5px;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;}
@@ -375,7 +375,7 @@ body.light .fi-btn{color:#0f0e0c;border-color:#e4e3df;}
 .dot-btn:hover{background:var(--lt);}
 .drop-menu{position:fixed;background:rgba(19,22,38,.98);backdrop-filter:blur(20px);border:1.5px solid var(--bdr);border-radius:12px;padding:4px;min-width:148px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.12);display:none;}
 .drop-menu.open{display:block;}
-.dm-i{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;color:#f0f2ff;font-family:inherit;border:none;background:transparent;width:100%;text-align:left;font-weight:500;transition:background .1s;}
+.dm-i{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;color:var(--ink);font-family:inherit;border:none;background:transparent;width:100%;text-align:left;font-weight:500;transition:background .1s;}
 
 .dm-i:hover{background:var(--lt);}
 .dm-i.red{color:var(--red)!important;}
@@ -405,7 +405,7 @@ body.light .fi-btn{color:#0f0e0c;border-color:#e4e3df;}
 
 .fg{margin-bottom:10px;}
 .fl{display:block;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;color:rgba(107,114,128,.8);margin-bottom:6px;text-transform:uppercase;letter-spacing:2px;}
-.fi{width:100%;border:1px solid var(--bdr);border-radius:9px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:12px;color:#f0f2ff;outline:none;background:var(--glass);transition:all .15s;}
+.fi{width:100%;border:1px solid var(--bdr);border-radius:9px;padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);outline:none;background:var(--glass);transition:all .15s;}
 
 .fi:focus{border-color:rgba(129,140,248,.5);box-shadow:0 0 0 3px rgba(129,140,248,.1);}
 .modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
@@ -480,7 +480,7 @@ body.light .fi-btn{color:#0f0e0c;border-color:#e4e3df;}
 .search-overlay{position:fixed;inset:0;background:rgba(5,5,15,.75);backdrop-filter:blur(12px);z-index:400;display:none;flex-direction:column;align-items:center;padding-top:80px;}
 .search-overlay.open{display:flex;}
 .search-box{background:rgba(19,22,38,.98);backdrop-filter:blur(24px);border-radius:18px;width:min(600px,94vw);padding:20px;border:1px solid rgba(129,140,248,.2);box-shadow:0 24px 64px rgba(0,0,0,.5);max-height:80vh;display:flex;flex-direction:column;}
-.search-inp{width:100%;font-size:15px;border:none;outline:none;background:transparent;color:#f0f2ff;font-family:inherit;padding:4px 0 12px;border-bottom:1.5px solid var(--bdr);margin-bottom:12px;font-weight:600;}
+.search-inp{width:100%;font-size:15px;border:none;outline:none;background:transparent;color:var(--ink);font-family:inherit;padding:4px 0 12px;border-bottom:1.5px solid var(--bdr);margin-bottom:12px;font-weight:600;}
 body.light .search-inp{color:#0f0e0c;}
 #search-results{overflow-y:auto;max-height:50vh;}
 .search-result{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background .12s;}
@@ -897,7 +897,7 @@ const HTML = `
 <!-- PORTAL -->
 <div class="portal" id="creator-portal">
   <div class="portal-topbar">
-    <div style="font-size:14px;font-weight:700;color:#f0f2ff">🎨 Creator Portal</div>
+    <div style="font-size:14px;font-weight:700;color:var(--ink)">🎨 Creator Portal</div>
     <div style="font-size:11px;color:var(--muted);margin-left:8px">Ansicht als Creator</div>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
       <div style="font-size:11px;color:var(--muted)" id="portal-user-label">Angemeldet als: <strong>–</strong></div>
@@ -976,7 +976,7 @@ const HTML = `
 <!-- CONFIRM -->
 <div id="confirm-bg" style="position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(6px);z-index:700;display:none;align-items:center;justify-content:center;">
   <div class="confirm-box">
-    <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:#f0f2ff" id="confirm-title">Löschen?</div>
+    <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:var(--ink)" id="confirm-title">Löschen?</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Diese Aktion kann nicht rückgängig gemacht werden.</div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" id="confirm-cancel">Abbrechen</button>
@@ -1198,7 +1198,7 @@ function rDash(){
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(6px);z-index:600;display:flex;align-items:center;justify-content:center;';
     modal.innerHTML='<div style="background:#fff;border-radius:18px;padding:24px;width:420px;max-width:94vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
-      +'<div style="font-size:15px;font-weight:700;color:#f0f2ff">Creator ohne Upload</div>'
+      +'<div style="font-size:15px;font-weight:700;color:var(--ink)">Creator ohne Upload</div>'
       +'<div style="font-size:12px;color:var(--muted)">'+noUpload.length+' von '+S.creators.length+'</div></div>'
       +listHtml
       +'<button id="no-up-close" style="width:100%;margin-top:16px;padding:10px;background:linear-gradient(135deg,#4f6ef7,#6c63ff);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">Schließen</button>'
@@ -1296,7 +1296,7 @@ function rAnalytics(){
         +';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">'+r.cini+'</div>';
     return '<div class="an-tr" style="grid-template-columns:2fr 1.5fr 1.5fr 1fr 1fr" data-an-cid="'+r.cid+'">'
       +'<div style="display:flex;align-items:center;gap:8px">'+av
-      +'<div><div style="font-size:12px;font-weight:600;color:#f0f2ff">'+r.cname+'</div>'
+      +'<div><div style="font-size:12px;font-weight:600;color:var(--ink)">'+r.cname+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+r.count+' Upload'+(r.count!==1?'s':'')+'</div>'
       +'</div></div>'
       +'<div style="font-size:12px;color:var(--ink)">'+(r.product||'<span style="color:var(--muted)">–</span>')+'</div>'
@@ -1304,7 +1304,7 @@ function rAnalytics(){
       +'<div><span class="status-dot '+(r.online?'status-on':'status-off')+'">'
       +'<span class="dot '+(r.online?'dot-on':'dot-off')+'"></span>'
       +(r.online?'Online':'Offline')+'</span></div>'
-      +'<div style="font-size:11px;color:rgba(240,242,255,.8)">'+(r.dateStr||'<span style="color:var(--muted)">–</span>')+'</div>'
+      +'<div style="font-size:11px;color:var(--ink2)">'+(r.dateStr||'<span style="color:var(--muted)">–</span>')+'</div>'
       +'</div>';
   }).join('');
 
@@ -2092,7 +2092,7 @@ function rCInvite(){
       +'<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'
       +(c.photo?'<img src="'+c.photo+'" style="width:28px;height:28px;border-radius:8px;object-fit:cover;flex-shrink:0">'
         :'<div style="width:28px;height:28px;border-radius:8px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">'+c.ini+'</div>')
-      +'<div><div style="font-size:12px;font-weight:600;color:#f0f2ff">'+c.name+'</div>'
+      +'<div><div style="font-size:12px;font-weight:600;color:var(--ink)">'+c.name+'</div>'
       +(c.email?'<div style="font-size:10px;color:var(--muted)">'+c.email+'</div>':'')
       +'</div></div>'
       +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
@@ -2607,7 +2607,7 @@ function rContentHub(){
     }
     return '<div class="sc ch-card" data-cat="'+cat+'" style="padding:14px;cursor:pointer">'
       +preview
-      +'<div style="font-size:13px;font-weight:700;color:#f0f2ff">'+cat+'</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--ink)">'+cat+'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+items.length+' Inhalt'+(items.length!==1?'e':'')+'</div>'
       +'</div>';
   }).join('');
