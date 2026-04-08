@@ -664,28 +664,28 @@ export default function CreatorPortal() {
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;color:#1a1a2e;background:#f0f0f8;}
-  .ni{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:500;color:#8888aa;margin-bottom:2px;user-select:none;transition:all .15s;}
-  .ni:hover{background:#f5f5fc;color:#1a1a2e;}
-  .ni.on{background:linear-gradient(135deg,rgba(79,110,247,.12),rgba(108,99,255,.08));color:#4f6ef7;font-weight:600;}
-  .ni-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:transparent;transition:all .18s;}
-  .ni.on .ni-ico{background:linear-gradient(135deg,#4f6ef7,#6c63ff);color:#fff;}
-  .tab-btn{padding:9px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:#8888aa;border-bottom:2.5px solid transparent;font-family:inherit;white-space:nowrap;border-radius:8px 8px 0 0;transition:all .15s;}
-  .tab-btn.on{color:#4f6ef7;font-weight:700;border-bottom-color:#4f6ef7;background:rgba(79,110,247,.06);}
-  .tab-btn:hover:not(.on){color:#4f6ef7;background:rgba(79,110,247,.04);}
-  .cp-badge{background:rgba(79,110,247,.1);color:#4f6ef7;font-size:9px;font-weight:700;border-radius:20px;padding:2px 6px;margin-left:4px;vertical-align:middle;}
+  body{font-family:'Instrument Sans',system-ui,sans-serif;font-size:13px;color:#0f0e0c;background:#f8f7f4;}
+  .ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:400;color:#9a9890;margin-bottom:1px;user-select:none;transition:all .15s;border-left:2px solid transparent;}
+  .ni:hover{background:#f2f1ee;color:#0f0e0c;}
+  .ni.on{background:#0f0e0c;color:#fff;font-weight:500;border-left-color:transparent;}
+  .ni-ico{width:16px;text-align:center;font-size:13px;flex-shrink:0;opacity:.5;transition:opacity .15s;}
+  .ni.on .ni-ico{opacity:1;}
+  .tab-btn{padding:9px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:500;color:#9a9890;border-bottom:2.5px solid transparent;font-family:'Instrument Sans',sans-serif;white-space:nowrap;transition:all .15s;}
+  .tab-btn.on{color:#0f0e0c;font-weight:600;border-bottom-color:#0f0e0c;}
+  .tab-btn:hover:not(.on){color:#3a3935;}
+  .cp-badge{background:#f2f1ee;color:#3a3935;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;border-radius:4px;padding:2px 6px;margin-left:4px;vertical-align:middle;border:1px solid #e4e3df;}
 `
 
 const s: Record<string, React.CSSProperties> = {
-  fl: { display: 'block', fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 5 },
-  fi: { width: '100%', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '9px 12px', fontFamily: 'inherit', fontSize: 12, outline: 'none', background: '#fff', color: '#1a1a2e' },
-  btnP: { background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', color: '#fff', border: 'none', borderRadius: 14, padding: '10px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(79,110,247,.3)' },
-  btnGhost: { background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 9, padding: '6px 14px', fontSize: 12, cursor: 'pointer', color: '#8888aa', fontFamily: 'inherit', fontWeight: 500 },
-  sc: { background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '12px 16px' },
-  sl: { fontSize: 9, color: '#8888aa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 },
-  sv: { fontSize: 22, fontWeight: 800, color: '#1a1a2e' },
-  navLabel: { fontSize: 9, fontWeight: 700, color: '#bbbbd0', textTransform: 'uppercase', letterSpacing: 1.2, padding: '0 8px', marginBottom: 4 },
-  errBox: { background: '#fff5f5', border: '1.5px solid #fecaca', borderRadius: 14, padding: '9px 14px', fontSize: 12, color: '#dc2626', marginBottom: 14 },
+  fl: { display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 700, color: '#9a9890', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 6 },
+  fi: { width: '100%', border: '1.5px solid #e4e3df', borderRadius: 9, padding: '9px 12px', fontFamily: "'Instrument Sans',sans-serif", fontSize: 12, outline: 'none', background: '#fff', color: '#0f0e0c', transition: 'border-color .15s' },
+  btnP: { background: '#0f0e0c', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Instrument Sans',sans-serif" },
+  btnGhost: { background: '#fff', border: '1.5px solid #e4e3df', borderRadius: 8, padding: '7px 14px', fontSize: 12, cursor: 'pointer', color: '#9a9890', fontFamily: "'Instrument Sans',sans-serif", fontWeight: 500 },
+  sc: { background: '#fff', border: '1.5px solid #e4e3df', borderRadius: 12, padding: '14px 16px' },
+  sl: { fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: '#9a9890', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 6 },
+  sv: { fontFamily: "'JetBrains Mono',monospace", fontSize: 26, fontWeight: 700, color: '#0f0e0c' },
+  navLabel: { fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: '#c4c3be', textTransform: 'uppercase', letterSpacing: 2, padding: '0 8px', marginBottom: 5, marginTop: 10 },
+  errBox: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 9, padding: '9px 14px', fontSize: 12, color: '#c0392b', marginBottom: 14 },
 }
