@@ -45,6 +45,7 @@ export default function CreatorPortal() {
   const [lbComments, setLbComments] = useState<any[]>([])
   const [lbCommInput, setLbCommInput] = useState('')
   const [lbCommLoading, setLbCommLoading] = useState(false)
+  const [isLight, setIsLight] = useState(false)
 
   // Upload form
   const [uCategory, setUCategory] = useState<Tab>('bilder')
@@ -267,6 +268,13 @@ export default function CreatorPortal() {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
+  function toggleLight() {
+    const next = !isLight
+    setIsLight(next)
+    document.body.classList.toggle('cp-light', next)
+    localStorage.setItem('cp_light_mode', String(next))
+  }
+
   function logout() {
     localStorage.removeItem('creator_token'); localStorage.removeItem('creator')
     setView('login'); setCreator(null); setUploads([]); setCode('')
@@ -323,10 +331,30 @@ export default function CreatorPortal() {
         <div style={{ background: 'var(--cp-surf)', borderBottom: '1px solid var(--cp-bdr)', height: 54, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#818cf8,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>F</div>
-            <div style={{ fontWeight: 800, fontSize: 13, color: '#f0f2ff' }}>filapen <span style={{ fontWeight: 500, fontSize: 11, color: '#6b7280' }}>· Creator Hub</span></div>
+            <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--cp-text)' }}>filapen <span style={{ fontWeight: 500, fontSize: 11, color: '#6b7280' }}>· Creator Hub</span></div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#6b7280' }}>Angemeldet als: <strong style={{ color: '#f0f2ff' }}>{creator?.name}</strong></span>
+            <span style={{ fontSize: 11, color: 'var(--cp-muted)' }}>Angemeldet als: <strong style={{ color: 'var(--cp-text)' }}>{creator?.name}</strong></span>
+            <button onClick={toggleLight} style={{
+              background: isLight ? 'rgba(91,79,216,.1)' : 'rgba(255,255,255,.06)',
+              border: `1px solid ${isLight ? 'rgba(91,79,216,.25)' : 'rgba(255,255,255,.1)'}`,
+              borderRadius: 8, padding: '6px 12px', fontSize: 11,
+              cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+              color: isLight ? '#5b4fd8' : 'rgba(156,163,175,.8)',
+              display: 'flex', alignItems: 'center', gap: 6, transition: 'all .2s'
+            }}>
+              {isLight ? (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  Hell
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                  Dunkel
+                </>
+              )}
+            </button>
             <button onClick={logout} style={s.btnGhost}>Abmelden</button>
           </div>
         </div>
@@ -770,9 +798,18 @@ const css = `
   }
   body.cp-light{
     --cp-bg:#f8f7f4;--cp-surf:#ffffff;--cp-lt:#f2f1ee;
-    --cp-bdr:#e4e3df;--cp-text:#0f0e0c;--cp-muted:#9a9890;
-    --cp-accent:#818cf8;
+    --cp-bdr:#e4e3df;--cp-text:#0f0e0c;--cp-muted:#6b6b65;
+    --cp-accent:#5b4fd8;
+    color:#0f0e0c;
+    background:#f8f7f4;
   }
+  body.cp-light .ni{color:#6b6b65;}
+  body.cp-light .ni:hover{background:#f2f1ee;color:#0f0e0c;}
+  body.cp-light .ni.on{background:#0f0e0c;color:#fff;}
+  body.cp-light .tab-btn{color:#6b6b65;}
+  body.cp-light .tab-btn.on{color:#5b4fd8;border-bottom-color:#5b4fd8;}
+  body.cp-light .tab-btn:hover:not(.on){color:#0f0e0c;}
+  body.cp-light .cp-badge{background:rgba(91,79,216,.1);color:#5b4fd8;border-color:rgba(91,79,216,.2);}
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600;1,700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'DM Sans',system-ui,sans-serif;font-size:13px;color:#f0f2ff;background:#0d0f1a;}
@@ -788,12 +825,12 @@ const css = `
 
 const s: Record<string, React.CSSProperties> = {
   fl: { display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: 'rgba(107,114,128,.7)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 7 },
-  fi: { width: '100%', border: '1px solid rgba(255,255,255,.08)', borderRadius: 9, padding: '9px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: 12, outline: 'none', background: 'rgba(255,255,255,.04)', color: '#f0f2ff', transition: 'all .2s' },
+  fi: { width: '100%', border: '1px solid rgba(255,255,255,.08)', borderRadius: 9, padding: '9px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: 12, outline: 'none', background: 'rgba(255,255,255,.04)', color: 'var(--cp-text)', transition: 'all .2s' },
   btnP: { background: 'linear-gradient(135deg,#818cf8,#a78bfa)', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", boxShadow: '0 4px 20px rgba(129,140,248,.3)' },
-  btnGhost: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '7px 14px', fontSize: 12, cursor: 'pointer', color: '#9ca3af', fontFamily: "'DM Sans',sans-serif", fontWeight: 500 },
+  btnGhost: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '7px 14px', fontSize: 12, cursor: 'pointer', color: 'var(--cp-muted)', fontFamily: "'DM Sans',sans-serif", fontWeight: 500 },
   sc: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: '14px 16px' },
   sl: { fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: 'rgba(107,114,128,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 8 },
-  sv: { fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 700, color: '#f0f2ff' },
+  sv: { fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 700, color: 'var(--cp-text)' },
   navLabel: { fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: 'rgba(107,114,128,.5)', textTransform: 'uppercase', letterSpacing: 2, padding: '0 8px', marginBottom: 5, marginTop: 10 },
   errBox: { background: 'rgba(248,113,113,.1)', border: '1px solid rgba(248,113,113,.25)', borderRadius: 9, padding: '9px 14px', fontSize: 12, color: '#f87171', marginBottom: 14 },
 }
