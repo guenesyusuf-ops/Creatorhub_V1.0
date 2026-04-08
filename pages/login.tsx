@@ -36,58 +36,123 @@ export default function LoginPage() {
 
   return (
     <>
-      <Head><title>Login – CreatorHub</title></Head>
-      <div style={styles.wrap}>
-        <div style={styles.card}>
-          <div style={styles.logoWrap}>
-            <div style={styles.logoIcon}>🎨</div>
-            <div>
-              <div style={styles.logoName}>Filapen</div>
-              <div style={styles.logoSub}>CREATOR HUB</div>
+      <Head>
+        <title>Login – Filapen Creator Hub</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+      </Head>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Instrument Sans',system-ui,sans-serif;background:#f8f7f4;color:#0f0e0c;min-height:100vh;}
+        .inp:focus{border-color:#0f0e0c!important;outline:none;box-shadow:0 0 0 3px rgba(15,14,12,.08);}
+      `}</style>
+      <div style={{
+        minHeight:'100vh',display:'flex',
+        background:'#f8f7f4',
+      }}>
+        {/* Left Panel */}
+        <div style={{
+          width:'420px',minWidth:'420px',
+          background:'#0f0e0c',
+          display:'flex',flexDirection:'column',
+          padding:'48px 44px',
+          position:'relative',overflow:'hidden',
+        }}>
+          {/* Gold glow */}
+          <div style={{position:'absolute',top:'-80px',right:'-80px',width:'300px',height:'300px',borderRadius:'50%',background:'radial-gradient(circle,rgba(200,147,58,.2),transparent 70%)',pointerEvents:'none'}} />
+          
+          <div style={{position:'relative',zIndex:1,flex:1,display:'flex',flexDirection:'column'}}>
+            {/* Logo */}
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:60}}>
+              <div style={{
+                width:38,height:38,borderRadius:9,
+                border:'1.5px solid #c8933a',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontFamily:"'Fraunces',serif",fontSize:19,fontWeight:900,color:'#c8933a',
+              }}>F</div>
+              <div>
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:'#f0ede8',letterSpacing:'-.3px'}}>filapen</div>
+                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:'rgba(200,147,58,.6)',letterSpacing:'1px',textTransform:'uppercase'}}>Creator Hub</div>
+              </div>
+            </div>
+
+            {/* Headline */}
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'rgba(200,147,58,.7)',letterSpacing:'2px',textTransform:'uppercase',marginBottom:12}}>Admin Login</div>
+              <h1 style={{fontFamily:"'Fraunces',serif",fontSize:42,fontWeight:900,fontStyle:'italic',color:'#fff',lineHeight:1.05,letterSpacing:'-1px',marginBottom:20}}>
+                Willkommen zurück
+              </h1>
+              <div style={{width:2,height:40,background:'#c8933a',borderRadius:2,opacity:.6,marginBottom:20}} />
+              <p style={{fontStyle:'italic',fontSize:13,color:'rgba(255,255,255,.35)',lineHeight:1.7,maxWidth:280}}>
+                Manage deine Creator, verfolge Uploads und steuere deinen Content-Hub.
+              </p>
+            </div>
+
+            {/* Bottom */}
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'rgba(255,255,255,.2)',letterSpacing:'1px'}}>
+              FILAPEN GMBH · {new Date().getFullYear()}
             </div>
           </div>
-          <h1 style={styles.title}>Willkommen zurück</h1>
-          <p style={styles.sub}>Melde dich mit deinen Zugangsdaten an</p>
-          <form onSubmit={handleLogin}>
-            <div style={styles.group}>
-              <label style={styles.label}>E-Mail</label>
-              <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="deine@email.com" required />
+        </div>
+
+        {/* Right Panel - Form */}
+        <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:40}}>
+          <div style={{width:'100%',maxWidth:400}}>
+            <h2 style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,fontStyle:'italic',color:'#0f0e0c',marginBottom:6,letterSpacing:'-.4px'}}>Anmelden</h2>
+            <p style={{fontSize:13,color:'#9a9890',marginBottom:32}}>Gib deine Zugangsdaten ein um fortzufahren.</p>
+
+            <form onSubmit={handleLogin}>
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:'#9a9890',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:7}}>E-Mail</label>
+                <input
+                  className="inp"
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="deine@email.com" required
+                  style={{width:'100%',border:'1.5px solid #e4e3df',borderRadius:9,padding:'11px 14px',fontFamily:"'Instrument Sans',sans-serif",fontSize:13,color:'#0f0e0c',background:'#fff',transition:'border-color .15s'}}
+                />
+              </div>
+              <div style={{marginBottom:24}}>
+                <label style={{display:'block',fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:'#9a9890',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:7}}>Passwort</label>
+                <input
+                  className="inp"
+                  type="password" value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••" required
+                  style={{width:'100%',border:'1.5px solid #e4e3df',borderRadius:9,padding:'11px 14px',fontFamily:"'Instrument Sans',sans-serif",fontSize:13,color:'#0f0e0c',background:'#fff',transition:'border-color .15s'}}
+                />
+              </div>
+
+              {error && (
+                <div style={{background:'#fef2f2',border:'1.5px solid #fecaca',borderRadius:9,padding:'10px 14px',fontSize:12,color:'#c0392b',marginBottom:20,fontWeight:500}}>{error}</div>
+              )}
+
+              <button type="submit" disabled={loading} style={{
+                width:'100%',background:'#0f0e0c',color:'#fff',
+                fontWeight:600,fontSize:13,padding:'13px 0',
+                borderRadius:9,border:'none',cursor:'pointer',
+                fontFamily:"'Instrument Sans',sans-serif",
+                transition:'opacity .15s',opacity:loading ? .6 : 1,
+              }}>
+                {loading ? 'Anmelden…' : 'Anmelden →'}
+              </button>
+            </form>
+
+            <div style={{textAlign:'center',marginTop:24}}>
+              <div style={{height:1,background:'#e4e3df',marginBottom:20}} />
+              <button onClick={() => router.push('/creator')} style={{
+                background:'transparent',border:'1.5px solid #e4e3df',
+                color:'#9a9890',fontWeight:500,fontSize:13,
+                padding:'11px 0',borderRadius:9,cursor:'pointer',
+                fontFamily:"'Instrument Sans',sans-serif",width:'100%',
+                transition:'all .15s',
+              }}>
+                Creator-Portal →
+              </button>
             </div>
-            <div style={styles.group}>
-              <label style={styles.label}>Passwort</label>
-              <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-            </div>
-            {error && <div style={styles.error}>{error}</div>}
-            <button style={styles.btn} type="submit" disabled={loading}>
-              {loading ? 'Anmelden...' : 'Anmelden →'}
-            </button>
-          </form>
-          <div style={styles.divider}>oder</div>
-          <button style={styles.btnGhost} onClick={() => router.push('/creator')}>
-            🎬 Creator-Portal (mit Code)
-          </button>
-          <div style={styles.footer}>Filapen GmbH · Creator Hub</div>
+          </div>
         </div>
       </div>
     </>
   )
-}
-
-const styles: any = {
-  wrap: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f7', padding: 24 },
-  card: { background: '#ffffff', border: '1px solid #e8e8ec', borderRadius: 16, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' },
-  logoWrap: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 },
-  logoIcon: { fontSize: 28 },
-  logoName: { fontWeight: 700, fontSize: 16, color: '#111', lineHeight: 1.2 },
-  logoSub: { fontSize: 10, color: '#999', letterSpacing: 1.5, fontWeight: 500 },
-  title: { fontSize: 24, fontWeight: 700, color: '#111', marginBottom: 6 },
-  sub: { fontSize: 14, color: '#888', marginBottom: 28 },
-  group: { marginBottom: 16 },
-  label: { display: 'block', fontSize: 12, color: '#666', fontWeight: 500, marginBottom: 6 },
-  input: { width: '100%', background: '#f9f9fb', border: '1px solid #e8e8ec', borderRadius: 8, padding: '11px 14px', color: '#111', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const },
-  error: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 16 },
-  btn: { width: '100%', background: '#111', color: '#fff', fontWeight: 600, fontSize: 15, padding: '13px 0', borderRadius: 8, border: 'none', marginTop: 8, cursor: 'pointer' },
-  divider: { textAlign: 'center' as const, color: '#bbb', fontSize: 13, margin: '20px 0', borderTop: '1px solid #f0f0f0', paddingTop: 20 },
-  btnGhost: { width: '100%', background: '#f5f5f7', border: '1px solid #e8e8ec', color: '#555', fontWeight: 500, fontSize: 14, padding: '12px 0', borderRadius: 8, cursor: 'pointer' },
-  footer: { textAlign: 'center' as const, color: '#bbb', fontSize: 12, marginTop: 24 }
 }
