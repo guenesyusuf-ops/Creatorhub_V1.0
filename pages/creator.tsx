@@ -12,97 +12,113 @@ export default function CreatorLoginPage() {
   useEffect(() => {
     if (!router.isReady) return
     setReady(true)
-
-    // If ?error= param exists show message
     const err = router.query.error as string
-    if (err === 'invalid') setError('Ungültiger oder abgelaufener Link. Bitte Code manuell eingeben.')
-    if (err === 'connection') setError('Verbindungsfehler. Bitte versuche es erneut.')
-
-    // If code in URL → forward directly to creator-portal which handles auth
+    if (err === 'invalid') setError('Ungültiger oder abgelaufener Link.')
+    if (err === 'connection') setError('Verbindungsfehler. Bitte erneut versuchen.')
     const urlCode = router.query.code as string
-    if (urlCode) {
-      router.replace(`/creator-portal?code=${urlCode}`)
-      return
-    }
-
-    // If already logged in → go to portal
+    if (urlCode) { router.replace(`/creator-portal?code=${urlCode}`); return }
     const existingToken = localStorage.getItem('creator_token')
     const existingCreator = localStorage.getItem('creator')
-    if (existingToken && existingCreator) {
-      router.replace('/creator-portal')
-    }
+    if (existingToken && existingCreator) router.replace('/creator-portal')
   }, [router.isReady])
 
   async function handleLogin(e: any) {
     e.preventDefault()
     if (!code.trim()) return
-    // Forward to creator-portal with code
     router.push(`/creator-portal?code=${code.trim().toUpperCase()}`)
   }
 
   if (!ready) return (
     <>
       <Head><title>Creator Portal – Filapen</title></Head>
-      <div style={s.wrap}>
-        <div style={s.card}>
-          <div style={s.logoSub}>CREATOR HUB</div>
-          <div style={{ textAlign: 'center', marginTop: 24, color: '#888', fontSize: 14 }}>⏳ Einen Moment...</div>
-        </div>
+      <div style={{minHeight:'100vh',background:'#f8f7f4',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:'#9a9890'}}>Laden…</div>
       </div>
     </>
   )
 
   return (
     <>
-      <Head><title>Creator Portal – Filapen</title></Head>
-      <div style={s.wrap}>
-        <div style={s.card}>
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={s.logoSub}>CREATOR HUB</div>
-          </div>
-          <h2 style={s.title}>Dein Creator Portal</h2>
-          <p style={s.sub}>Nutze den Link aus deiner Einladungs-E-Mail oder gib deinen Code ein.</p>
-          <form onSubmit={handleLogin}>
-            <div style={s.group}>
-              <label style={s.label}>Einladungscode</label>
-              <input
-                style={s.codeInput}
-                value={code}
-                onChange={e => setCode(e.target.value.toUpperCase())}
-                placeholder="XXXXXXXX"
-                maxLength={8}
-                autoFocus
-                required
-              />
+      <Head>
+        <title>Creator Portal – Filapen</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+      </Head>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Instrument Sans',system-ui,sans-serif;background:#f8f7f4;color:#0f0e0c;}
+        .code-inp{width:100%;background:#fff;border:2px solid #e4e3df;border-radius:12px;padding:18px 20px;font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;letter-spacing:8px;text-align:center;text-transform:uppercase;outline:none;color:#0f0e0c;transition:border-color .15s;}
+        .code-inp:focus{border-color:#0f0e0c;box-shadow:0 0 0 3px rgba(15,14,12,.08);}
+        .code-inp::placeholder{color:#c4c3be;letter-spacing:4px;font-size:20px;}
+      `}</style>
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f8f7f4',padding:24}}>
+        <div style={{width:'100%',maxWidth:480}}>
+
+          {/* Logo */}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:48,justifyContent:'center'}}>
+            <div style={{width:36,height:36,borderRadius:9,background:'#0f0e0c',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:900,color:'#c8933a'}}>F</div>
+            <div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:700,color:'#0f0e0c',letterSpacing:'-.3px'}}>filapen</div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:'#9a9890',letterSpacing:'1px',textTransform:'uppercase'}}>Creator Hub</div>
             </div>
-            {error && <div style={s.error}>{error}</div>}
-            <button style={s.btn} type="submit" disabled={loading}>
-              {loading ? 'Weiterleiten...' : 'Einloggen →'}
+          </div>
+
+          {/* Card */}
+          <div style={{background:'#fff',border:'1.5px solid #e4e3df',borderRadius:20,padding:'40px 44px',boxShadow:'0 4px 32px rgba(0,0,0,.05)'}}>
+            <div style={{textAlign:'center',marginBottom:32}}>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#c8933a',letterSpacing:'2px',textTransform:'uppercase',marginBottom:10}}>Creator Portal</div>
+              <h1 style={{fontFamily:"'Fraunces',serif",fontSize:30,fontWeight:900,fontStyle:'italic',color:'#0f0e0c',letterSpacing:'-.6px',marginBottom:10}}>Dein Portal</h1>
+              <p style={{fontSize:13,color:'#9a9890',lineHeight:1.6}}>Gib deinen Einladungscode ein oder nutze den Link aus deiner E-Mail.</p>
+            </div>
+
+            <form onSubmit={handleLogin}>
+              <div style={{marginBottom:20}}>
+                <label style={{display:'block',fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:'#9a9890',textTransform:'uppercase',letterSpacing:'1.5px',marginBottom:10,textAlign:'center'}}>Einladungscode</label>
+                <input
+                  className="code-inp"
+                  value={code}
+                  onChange={e => setCode(e.target.value.toUpperCase())}
+                  placeholder="XXXXXXXX"
+                  maxLength={8}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              {error && (
+                <div style={{background:'#fef2f2',border:'1.5px solid #fecaca',borderRadius:9,padding:'10px 14px',fontSize:12,color:'#c0392b',marginBottom:16,textAlign:'center',fontWeight:500}}>{error}</div>
+              )}
+
+              <button type="submit" disabled={loading} style={{
+                width:'100%',background:'#0f0e0c',color:'#fff',
+                fontWeight:600,fontSize:13,padding:'14px 0',
+                borderRadius:10,border:'none',cursor:'pointer',
+                fontFamily:"'Instrument Sans',sans-serif",
+                transition:'opacity .15s',marginTop:4,
+              }}>
+                {loading ? 'Weiterleiten…' : 'Einloggen →'}
+              </button>
+            </form>
+
+            <div style={{height:1,background:'#e4e3df',margin:'24px 0'}} />
+
+            <button onClick={() => router.push('/login')} style={{
+              width:'100%',background:'transparent',
+              border:'1.5px solid #e4e3df',color:'#9a9890',
+              fontWeight:500,fontSize:13,padding:'11px 0',
+              borderRadius:10,cursor:'pointer',
+              fontFamily:"'Instrument Sans',sans-serif",
+              display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+            }}>
+              🔐 Admin Login
             </button>
-          </form>
-          <div style={s.divider}>oder</div>
-          <button style={s.btnGhost} onClick={() => router.push('/login')}>
-            🔐 Admin Login
-          </button>
-          <div style={s.footer}>Filapen GmbH · Business Hub</div>
+          </div>
+
+          <div style={{textAlign:'center',marginTop:24,fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#c4c3be',letterSpacing:'1px'}}>
+            FILAPEN GMBH · CREATOR HUB
+          </div>
         </div>
       </div>
     </>
   )
-}
-
-const s: any = {
-  wrap: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f5', padding: 24 },
-  card: { background: '#fff', border: '1px solid #e8e8ec', borderRadius: 20, padding: '44px 40px', width: '100%', maxWidth: 400, boxShadow: '0 2px 20px rgba(0,0,0,0.06)' },
-  logoSub: { fontSize: 10, color: '#aaa', letterSpacing: '3px', fontWeight: 600, textAlign: 'center' as const },
-  title: { fontSize: 22, fontWeight: 700, color: '#111', margin: '0 0 6px', textAlign: 'center' as const },
-  sub: { fontSize: 13, color: '#888', margin: '0 0 24px', textAlign: 'center' as const, lineHeight: 1.6 },
-  group: { marginBottom: 20 },
-  label: { display: 'block', fontSize: 12, color: '#666', fontWeight: 500, marginBottom: 6 },
-  codeInput: { width: '100%', background: '#f9f9fb', border: '1px solid #e8e8ec', borderRadius: 10, padding: '12px 14px', fontSize: 22, fontWeight: 700, letterSpacing: 6, textAlign: 'center' as const, textTransform: 'uppercase' as const, boxSizing: 'border-box' as const, outline: 'none', color: '#111' },
-  error: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 16 },
-  btn: { width: '100%', background: '#111', color: '#fff', fontWeight: 600, fontSize: 15, padding: '13px 0', borderRadius: 10, border: 'none', cursor: 'pointer' },
-  divider: { textAlign: 'center' as const, color: '#ccc', fontSize: 13, margin: '18px 0', borderTop: '1px solid #f0f0f0', paddingTop: 18 },
-  btnGhost: { width: '100%', background: '#f9f9fb', border: '1px solid #e8e8ec', color: '#555', fontWeight: 500, fontSize: 14, padding: '12px 0', borderRadius: 10, cursor: 'pointer' },
-  footer: { textAlign: 'center' as const, color: '#ccc', fontSize: 12, marginTop: 24 }
 }
