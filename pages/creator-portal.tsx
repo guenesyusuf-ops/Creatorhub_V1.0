@@ -41,6 +41,11 @@ export default function CreatorPortal() {
   const [toast, setToast] = useState('')
   const [lightbox, setLightbox] = useState<Upload | null>(null)
 
+  // Comments
+  const [lbComments, setLbComments] = useState<any[]>([])
+  const [lbCommInput, setLbCommInput] = useState('')
+  const [lbCommLoading, setLbCommLoading] = useState(false)
+
   // Upload form
   const [uCategory, setUCategory] = useState<Tab>('bilder')
   const [uLabel, setULabel] = useState('')
@@ -140,11 +145,42 @@ export default function CreatorPortal() {
     if (u.file_type === 'link') { window.open(u.file_url, '_blank'); return }
     const isVideo = u.file_type === 'video' || u.mime_type?.startsWith('video/')
     const isImage = u.file_type === 'image' || u.mime_type?.startsWith('image/')
-    if (isVideo || isImage) { setLightbox(u); return }
+    if (isVideo || isImage) {
+      setLightbox(u)
+      setLbComments([])
+      setLbCommInput('')
+      loadLbComments(u)
+      return
+    }
     window.open(u.file_url, '_blank')
   }
 
-  function closeLightbox() { setLightbox(null) }
+  async function loadLbComments(u: Upload) {
+    const token = localStorage.getItem('creator_token') || ''
+    try {
+      const res = await fetch(`/api/comments?upload_id=${u.id}`, { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) { const data = await res.json(); setLbComments(data || []) }
+    } catch {}
+  }
+
+  async function sendLbComment() {
+    if (!lbCommInput.trim() || !lightbox || !creator) return
+    const token = localStorage.getItem('creator_token') || ''
+    setLbCommLoading(true)
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ upload_id: lightbox.id, creator_id: creator.id, author_role: 'creator', author_name: creator.name, message: lbCommInput.trim() })
+      })
+      if (res.ok) {
+        setLbCommInput('')
+        await loadLbComments(lightbox)
+        showToast('Kommentar gesendet ✓')
+      } else { showToast('Fehler beim Senden') }
+    } catch { showToast('Fehler') }
+    setLbCommLoading(false)
+  }
 
   async function handleUpload() {
     if (!uLabel.trim()) { showToast('Bitte eine Bezeichnung eingeben'); return }
@@ -626,36 +662,99 @@ export default function CreatorPortal() {
         </div>
       )}
 
-      {/* LIGHTBOX */}
+      {/* LIGHTBOX MIT KOMMENTAREN */}
       {lightbox && (
-        <div onClick={closeLightbox} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', zIndex: 9998, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <button onClick={closeLightbox} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            {(() => {
-              const isVideo = lightbox.file_type === 'video' || lightbox.mime_type?.startsWith('video/')
-              const isImage = lightbox.file_type === 'image' || lightbox.mime_type?.startsWith('image/')
-              if (isImage) return <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12, objectFit: 'contain' }} />
-              if (isVideo) return <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '85vw', maxHeight: '75vh', borderRadius: 12 }} />
-              return <div style={{ color: '#fff', fontSize: 48 }}>📄</div>
-            })()}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{lightbox.file_name}</div>
-              <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11, marginTop: 3 }}>
-                {fmtDate(lightbox.created_at)}{lightbox.file_size ? ` · ${fmtSize(lightbox.file_size)}` : ''}
+        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,15,.85)', backdropFilter: 'blur(12px)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 16, maxWidth: '92vw', maxHeight: '90vh', alignItems: 'flex-start' }}>
+
+            {/* MEDIA */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              {(() => {
+                const isVideo = lightbox.file_type === 'video' || lightbox.mime_type?.startsWith('video/')
+                const isImage = lightbox.file_type === 'image' || lightbox.mime_type?.startsWith('image/')
+                if (isImage) return <img src={lightbox.file_url} alt={lightbox.file_name} style={{ maxWidth: '55vw', maxHeight: '72vh', borderRadius: 14, objectFit: 'contain' }} />
+                if (isVideo) return <video src={lightbox.file_url} controls autoPlay style={{ maxWidth: '55vw', maxHeight: '72vh', borderRadius: 14 }} />
+                return <div style={{ color: '#fff', fontSize: 48 }}>📄</div>
+              })()}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: '#f0f2ff', fontSize: 14, fontWeight: 600 }}>{lightbox.file_name}</div>
+                <div style={{ color: 'rgba(156,163,175,.6)', fontSize: 11, marginTop: 3 }}>
+                  {fmtDate(lightbox.created_at)}{lightbox.file_size ? ` · ${fmtSize(lightbox.file_size)}` : ''}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={async () => {
+                  try {
+                    const res = await fetch(lightbox.file_url)
+                    const blob = await res.blob()
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url; a.download = lightbox.file_name; a.click()
+                    URL.revokeObjectURL(url)
+                  } catch { window.open(lightbox.file_url, '_blank') }
+                }} style={{ background: 'linear-gradient(135deg,#818cf8,#a78bfa)', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ⬇ Download
+                </button>
+                <button onClick={() => setLightbox(null)} style={{ background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 9, padding: '9px 18px', fontSize: 12, color: 'rgba(255,255,255,.7)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  × Schließen
+                </button>
               </div>
             </div>
-            <button onClick={async () => {
-              try {
-                const res = await fetch(lightbox.file_url)
-                const blob = await res.blob()
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url; a.download = lightbox.file_name; a.click()
-                URL.revokeObjectURL(url)
-              } catch { window.open(lightbox.file_url, '_blank') }
-            }} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 7, padding: '7px 16px', fontSize: 12, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-              ⬇ Herunterladen
-            </button>
+
+            {/* KOMMENTARE */}
+            <div style={{ width: 300, minWidth: 280, background: 'rgba(19,22,38,.98)', border: '1px solid rgba(129,140,248,.2)', borderRadius: 18, padding: 18, display: 'flex', flexDirection: 'column', maxHeight: '82vh', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }}>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, fontStyle: 'italic', color: '#f0f2ff', marginBottom: 4 }}>Kommentare</div>
+              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: 'rgba(107,114,128,.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+                {lbComments.length} Nachrichten
+              </div>
+
+              {/* Comment list */}
+              <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {lbComments.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'rgba(107,114,128,.6)', padding: '12px 0', textAlign: 'center', fontStyle: 'italic' }}>
+                    Noch keine Kommentare.<br/>Schreib die erste Nachricht.
+                  </div>
+                ) : lbComments.map((cm: any, i: number) => {
+                  const isAdmin = cm.author_role === 'admin'
+                  const dt = new Date(cm.created_at)
+                  const timeStr = dt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' · ' + dt.toLocaleDateString('de-DE')
+                  return (
+                    <div key={i} style={{
+                      background: isAdmin ? 'rgba(129,140,248,.12)' : 'rgba(255,255,255,.04)',
+                      border: isAdmin ? '1px solid rgba(129,140,248,.2)' : '1px solid rgba(255,255,255,.07)',
+                      borderRadius: 10, padding: '10px 12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: isAdmin ? '#818cf8' : 'rgba(156,163,175,.7)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                          {isAdmin ? 'Admin' : 'Du'}
+                        </span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: 'rgba(107,114,128,.5)' }}>{timeStr}</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: '#f0f2ff', lineHeight: 1.5 }}>{cm.message}</div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <textarea
+                  value={lbCommInput}
+                  onChange={e => setLbCommInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendLbComment() } }}
+                  placeholder="Kommentar schreiben…"
+                  rows={3}
+                  style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, padding: '9px 12px', fontSize: 13, color: '#f0f2ff', fontFamily: 'inherit', resize: 'none', outline: 'none', transition: 'border-color .2s' }}
+                />
+                <button
+                  onClick={sendLbComment}
+                  disabled={lbCommLoading || !lbCommInput.trim()}
+                  style={{ background: 'linear-gradient(135deg,#818cf8,#a78bfa)', border: 'none', borderRadius: 9, padding: '10px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: lbCommLoading || !lbCommInput.trim() ? .5 : 1, transition: 'opacity .2s', boxShadow: '0 4px 14px rgba(129,140,248,.3)' }}>
+                  {lbCommLoading ? 'Senden…' : 'Senden →'}
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
