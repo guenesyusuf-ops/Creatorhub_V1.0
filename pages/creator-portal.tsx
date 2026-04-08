@@ -254,10 +254,10 @@ export default function CreatorPortal() {
     <>
       <Head><title>Creator Portal – Filapen</title></Head>
       <style>{css}</style>
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f8', padding: 24 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0f1a', padding: 24 }}>
         <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 20, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 2px 16px rgba(0,0,0,.06)' }}>
-          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6, color: '#1a1a2e' }}>Creator Portal</div>
-          <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 28 }}>Gib deinen Einladungscode ein um fortzufahren.</div>
+          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 6, color: '#f0f2ff' }}>Creator Portal</div>
+          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 28 }}>Gib deinen Einladungscode ein um fortzufahren.</div>
           <form onSubmit={e => { e.preventDefault(); loginWithCode(code) }}>
             <div style={{ marginBottom: 14 }}>
               <label style={s.fl}>Einladungscode</label>
@@ -287,10 +287,10 @@ export default function CreatorPortal() {
         <div style={{ background: '#fff', borderBottom: '1px solid #e8e8f0', height: 54, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>F</div>
-            <div style={{ fontWeight: 800, fontSize: 13, color: '#1a1a2e' }}>filapen <span style={{ fontWeight: 500, fontSize: 11, color: '#8888aa' }}>· Creator Hub</span></div>
+            <div style={{ fontWeight: 800, fontSize: 13, color: '#f0f2ff' }}>filapen <span style={{ fontWeight: 500, fontSize: 11, color: '#6b7280' }}>· Creator Hub</span></div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#8888aa' }}>Angemeldet als: <strong style={{ color: '#1a1a2e' }}>{creator?.name}</strong></span>
+            <span style={{ fontSize: 11, color: '#6b7280' }}>Angemeldet als: <strong style={{ color: '#f0f2ff' }}>{creator?.name}</strong></span>
             <button onClick={logout} style={s.btnGhost}>Abmelden</button>
           </div>
         </div>
@@ -302,8 +302,8 @@ export default function CreatorPortal() {
             <div style={{ padding: '18px 10px 14px', borderBottom: '1px solid #e8e8f0', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#fff', flexShrink: 0 }}>F</div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e', letterSpacing: '-0.3px' }}>filapen</div>
-                <div style={{ fontSize: 9, color: '#8888aa', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Creator Hub</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#f0f2ff', letterSpacing: '-0.3px' }}>filapen</div>
+                <div style={{ fontSize: 9, color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Creator Hub</div>
               </div>
             </div>
             <div style={s.navLabel}>Mein Bereich</div>
@@ -335,8 +335,8 @@ export default function CreatorPortal() {
                     </div>
                 }
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#1a1a2e' }}>{creator?.name}</div>
-                  <div style={{ fontSize: 9, color: '#8888aa' }}>Creator</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#f0f2ff' }}>{creator?.name}</div>
+                  <div style={{ fontSize: 9, color: '#6b7280' }}>Creator</div>
                 </div>
               </div>
               <button onClick={logout} style={{ ...s.btnGhost, width: '100%', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>⏻ Abmelden</button>
@@ -344,7 +344,7 @@ export default function CreatorPortal() {
           </div>
 
           {/* MAIN */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#f0f0f8' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#0d0f1a' }}>
 
             {/* ── HOME ── */}
             {page === 'home' && (
@@ -368,8 +368,8 @@ export default function CreatorPortal() {
                   </div>
                   <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 }}>{creator?.name}</div>
-                    <div style={{ fontSize: 11, color: '#8888aa', marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#f0f2ff', marginBottom: 2 }}>{creator?.name}</div>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
                       {creator?.email}{creator?.age > 0 ? ` · ${creator.age}J` : ''}{creator?.country ? ` · ${FLAG[creator.country] || creator.country}` : ''}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -386,7 +386,7 @@ export default function CreatorPortal() {
                         <span style={{ background: '#faf5ff', color: '#7c3aed', border: '1px solid #e9d5ff', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>📊 {creator.provision}% + 💶 {creator.fixbetrag}€</span>
                       )}
                       {creator?.kids && (creator?.kids_ages || []).map((a: string) => (
-                        <span key={a} style={{ background: '#f0f0f8', border: '1.5px solid #e8e8f0', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>👶 {a}J</span>
+                        <span key={a} style={{ background: '#0d0f1a', border: '1.5px solid #e8e8f0', borderRadius: 12, fontSize: 10, padding: '2px 8px', fontWeight: 500 }}>👶 {a}J</span>
                       ))}
                     </div>
                   </div>
@@ -395,15 +395,15 @@ export default function CreatorPortal() {
                 {/* STATS */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
                   <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Kategorien</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Kategorien</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#f0f2ff' }}>{TABS.filter(t => uploads.some(u => u.tab === t.key)).length}</div>
                   </div>
                   <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Dateien gesamt</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e' }}>{totalUploads}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Dateien gesamt</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#f0f2ff' }}>{totalUploads}</div>
                   </div>
                   <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8888aa', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Hochgeladen</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '.5px', marginBottom: 6 }}>Hochgeladen</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: '#16a34a' }}>{totalUploads}</div>
                   </div>
                 </div>
@@ -424,7 +424,7 @@ export default function CreatorPortal() {
                     {tabUploads.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: 32 }}>
                         <div style={{ fontSize: 28, marginBottom: 8 }}>{TABS.find(t => t.key === activeTab)?.icon}</div>
-                        <div style={{ fontSize: 13, marginBottom: 14, color: '#8888aa' }}>Noch keine Inhalte in dieser Kategorie</div>
+                        <div style={{ fontSize: 13, marginBottom: 14, color: '#6b7280' }}>Noch keine Inhalte in dieser Kategorie</div>
                     <button style={s.btnP} onClick={() => { setUCategory(activeTab); setPage('upload') }}>+ Hochladen</button>
                   </div>
                 ) : (
@@ -446,10 +446,10 @@ export default function CreatorPortal() {
                           )}
                         </div>
                         <div style={{ padding: '8px 10px' }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1a1a2e' }}>{u.file_name}</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#f0f2ff' }}>{u.file_name}</div>
                           {(u as any).batch && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>📦 {(u as any).batch}</div>}
-                          {(u as any).product && <div style={{ fontSize: 10, color: '#8888aa', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
-                          <div style={{ fontSize: 10, color: '#8888aa', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
+                          {(u as any).product && <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>🏷️ {(u as any).product}</div>}
+                          <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{fmtDate(u.created_at)}{u.file_size ? ` · ${fmtSize(u.file_size)}` : ''}</div>
                           {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 3 }}>↗ Link öffnen</div>}
                         </div>
                       </div>
@@ -457,7 +457,7 @@ export default function CreatorPortal() {
                     <div style={{ border: '1.5px dashed #c7d0ff', borderRadius: 12, minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', background: '#fafbff' }}
                       onClick={() => { setUCategory(activeTab); setPage('upload') }}>
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#4f6ef7,#6c63ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18 }}>+</div>
-                      <span style={{ fontSize: 11, fontWeight: 500, color: '#8888aa' }}>Hochladen</span>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: '#6b7280' }}>Hochladen</span>
                     </div>
                   </div>
                 )}
@@ -469,10 +469,10 @@ export default function CreatorPortal() {
             {/* ── UPLOAD ── */}
             {page === 'upload' && (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Inhalte hochladen</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#f0f2ff', marginBottom: 16 }}>Inhalte hochladen</div>
                 <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 20 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 4 }}>Datei hochladen</div>
-                  <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 18 }}>Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#f0f2ff', marginBottom: 4 }}>Datei hochladen</div>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 18 }}>Lade Bilder oder Videos hoch oder trage einen Google Drive Link ein. Alles bleibt dauerhaft gespeichert.</div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <div>
@@ -514,8 +514,8 @@ export default function CreatorPortal() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
                         <span style={{ fontSize: 22 }}>{uFile.type.startsWith('image/') ? '🖼️' : '🎬'}</span>
                         <div style={{ textAlign: 'left' }}>
-                          <div style={{ fontSize: 12, fontWeight: 500, color: '#1a1a2e' }}>{uFile.name}</div>
-                          <div style={{ fontSize: 10, color: '#8888aa' }}>{fmtSize(uFile.size)}</div>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: '#f0f2ff' }}>{uFile.name}</div>
+                          <div style={{ fontSize: 10, color: '#6b7280' }}>{fmtSize(uFile.size)}</div>
                         </div>
                         <span style={{ marginLeft: 8, color: '#16a34a', fontSize: 18 }}>✓</span>
                       </div>
@@ -523,7 +523,7 @@ export default function CreatorPortal() {
                       <>
                         <div style={{ fontSize: 22, marginBottom: 6 }}>📂</div>
                         <div style={{ fontSize: 12, fontWeight: 500, color: '#555' }}>Klicken oder Datei hierher ziehen</div>
-                        <div style={{ fontSize: 11, color: '#8888aa', marginTop: 3 }}>Bilder & Videos · optional wenn Link angegeben</div>
+                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 3 }}>Bilder & Videos · optional wenn Link angegeben</div>
                       </>
                     )}
                   </div>
@@ -545,7 +545,7 @@ export default function CreatorPortal() {
 
                 {uploads.length > 0 && (
                   <div style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 18, marginTop: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e', marginBottom: 14 }}>Deine hochgeladenen Dateien ({uploads.length})</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#f0f2ff', marginBottom: 14 }}>Deine hochgeladenen Dateien ({uploads.length})</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                       {TABS.map(t => (
                         <button key={t.key}
@@ -564,15 +564,15 @@ export default function CreatorPortal() {
                             style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 9, overflow: 'hidden', cursor: 'pointer', transition: 'border-color .15s' }}
                             onMouseEnter={e => (e.currentTarget.style.borderColor = '#bbb')}
                             onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e8ec')}>
-                            <div style={{ height: 80, background: '#f0f0f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
+                            <div style={{ height: 80, background: '#0d0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                               {u.mime_type?.startsWith('image/') && u.file_url
                                 ? <img src={u.file_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : (u.file_type === 'video' || u.mime_type?.startsWith('video/')) ? '🎬'
                                 : u.file_type === 'link' ? '🔗' : '📄'}
                             </div>
                             <div style={{ padding: '7px 9px' }}>
-                              <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1a1a2e' }}>{u.file_name}</div>
-                              <div style={{ fontSize: 10, color: '#8888aa', marginTop: 2 }}>{fmtDate(u.created_at)}</div>
+                              <div style={{ fontSize: 10, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#f0f2ff' }}>{u.file_name}</div>
+                              <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{fmtDate(u.created_at)}</div>
                               {u.file_type === 'link' && <div style={{ fontSize: 10, color: '#4f6ef7', marginTop: 2 }}>↗ Link öffnen</div>}
                             </div>
                           </div>
@@ -587,14 +587,14 @@ export default function CreatorPortal() {
             {/* ── TIPS ── */}
             {page === 'tips' && (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 6 }}>Tipps & Tricks</div>
-                <div style={{ fontSize: 12, color: '#8888aa', marginBottom: 16 }}>Klicke auf eine Kategorie.</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#f0f2ff', marginBottom: 6 }}>Tipps & Tricks</div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 16 }}>Klicke auf eine Kategorie.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
                   {[{ id: 'briefings', icon: '📋', label: 'Briefings' }, { id: 'skripte', icon: '📝', label: 'Skripte' }, { id: 'lernvideos', icon: '🎬', label: 'Lernvideos' }].map(c => (
                     <div key={c.id} style={{ background: '#fff', border: '1.5px solid #e8e8f0', borderRadius: 14, padding: 20, cursor: 'pointer', textAlign: 'center' }}
                       onClick={() => setPage(c.id as NavPage)}>
                       <div style={{ fontSize: 28, marginBottom: 8 }}>{c.icon}</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{c.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#f0f2ff' }}>{c.label}</div>
                     </div>
                   ))}
                 </div>
@@ -606,7 +606,7 @@ export default function CreatorPortal() {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <button onClick={() => setPage('tips')} style={s.btnGhost}>← Zurück</button>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#f0f2ff' }}>
                     {page === 'briefings' ? '📋 Briefings' : page === 'skripte' ? '📝 Skripte' : '🎬 Lernvideos'}
                   </div>
                 </div>
@@ -621,7 +621,7 @@ export default function CreatorPortal() {
 
       {/* TOAST */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#fff', border: '1.5px solid #e8e8f0', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: '10px 16px', fontSize: 13, zIndex: 9999, boxShadow: '0 2px 12px rgba(0,0,0,.1)', color: '#1a1a2e' }}>
+        <div style={{ position: 'fixed', bottom: 20, right: 20, background: '#fff', border: '1.5px solid #e8e8f0', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: '10px 16px', fontSize: 13, zIndex: 9999, boxShadow: '0 2px 12px rgba(0,0,0,.1)', color: '#f0f2ff' }}>
           {toast}
         </div>
       )}
@@ -664,28 +664,27 @@ export default function CreatorPortal() {
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600;1,700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Instrument Sans',system-ui,sans-serif;font-size:13px;color:#0f0e0c;background:#f8f7f4;}
-  .ni{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:400;color:#9a9890;margin-bottom:1px;user-select:none;transition:all .15s;border-left:2px solid transparent;}
-  .ni:hover{background:#f2f1ee;color:#0f0e0c;}
-  .ni.on{background:#0f0e0c;color:#fff;font-weight:500;border-left-color:transparent;}
-  .ni-ico{width:16px;text-align:center;font-size:13px;flex-shrink:0;opacity:.5;transition:opacity .15s;}
-  .ni.on .ni-ico{opacity:1;}
-  .tab-btn{padding:9px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:500;color:#9a9890;border-bottom:2.5px solid transparent;font-family:'Instrument Sans',sans-serif;white-space:nowrap;transition:all .15s;}
-  .tab-btn.on{color:#0f0e0c;font-weight:600;border-bottom-color:#0f0e0c;}
-  .tab-btn:hover:not(.on){color:#3a3935;}
-  .cp-badge{background:#f2f1ee;color:#3a3935;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;border-radius:4px;padding:2px 6px;margin-left:4px;vertical-align:middle;border:1px solid #e4e3df;}
+  body{font-family:'DM Sans',system-ui,sans-serif;font-size:13px;color:#f0f2ff;background:#0d0f1a;}
+  .ni{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:400;color:#9ca3af;margin-bottom:1px;user-select:none;transition:all .2s;position:relative;}
+  .ni:hover{background:rgba(255,255,255,.05);color:#f0f2ff;}
+  .ni.on{background:linear-gradient(135deg,rgba(129,140,248,.15),rgba(167,139,250,.08));color:#a78bfa;font-weight:500;border:1px solid rgba(129,140,248,.2);}
+  .ni-ico{font-size:14px;flex-shrink:0;width:20px;text-align:center;}
+  .tab-btn{padding:9px 14px;border:none;background:none;cursor:pointer;font-size:12.5px;font-weight:400;color:#6b7280;border-bottom:2.5px solid transparent;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .2s;}
+  .tab-btn.on{color:#a78bfa;font-weight:600;border-bottom-color:#818cf8;}
+  .tab-btn:hover:not(.on){color:#f0f2ff;}
+  .cp-badge{background:rgba(129,140,248,.15);color:#818cf8;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;border:1px solid rgba(129,140,248,.2);}
 `
 
 const s: Record<string, React.CSSProperties> = {
-  fl: { display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 700, color: '#9a9890', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 6 },
-  fi: { width: '100%', border: '1.5px solid #e4e3df', borderRadius: 9, padding: '9px 12px', fontFamily: "'Instrument Sans',sans-serif", fontSize: 12, outline: 'none', background: '#fff', color: '#0f0e0c', transition: 'border-color .15s' },
-  btnP: { background: '#0f0e0c', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Instrument Sans',sans-serif" },
-  btnGhost: { background: '#fff', border: '1.5px solid #e4e3df', borderRadius: 8, padding: '7px 14px', fontSize: 12, cursor: 'pointer', color: '#9a9890', fontFamily: "'Instrument Sans',sans-serif", fontWeight: 500 },
-  sc: { background: '#fff', border: '1.5px solid #e4e3df', borderRadius: 12, padding: '14px 16px' },
-  sl: { fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: '#9a9890', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 6 },
-  sv: { fontFamily: "'JetBrains Mono',monospace", fontSize: 26, fontWeight: 700, color: '#0f0e0c' },
-  navLabel: { fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: '#c4c3be', textTransform: 'uppercase', letterSpacing: 2, padding: '0 8px', marginBottom: 5, marginTop: 10 },
-  errBox: { background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 9, padding: '9px 14px', fontSize: 12, color: '#c0392b', marginBottom: 14 },
+  fl: { display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: 'rgba(107,114,128,.7)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 7 },
+  fi: { width: '100%', border: '1px solid rgba(255,255,255,.08)', borderRadius: 9, padding: '9px 12px', fontFamily: "'DM Sans',sans-serif", fontSize: 12, outline: 'none', background: 'rgba(255,255,255,.04)', color: '#f0f2ff', transition: 'all .2s' },
+  btnP: { background: 'linear-gradient(135deg,#818cf8,#a78bfa)', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", boxShadow: '0 4px 20px rgba(129,140,248,.3)' },
+  btnGhost: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '7px 14px', fontSize: 12, cursor: 'pointer', color: '#9ca3af', fontFamily: "'DM Sans',sans-serif", fontWeight: 500 },
+  sc: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: '14px 16px' },
+  sl: { fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: 'rgba(107,114,128,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 8 },
+  sv: { fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 700, color: '#f0f2ff' },
+  navLabel: { fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700, color: 'rgba(107,114,128,.5)', textTransform: 'uppercase', letterSpacing: 2, padding: '0 8px', marginBottom: 5, marginTop: 10 },
+  errBox: { background: 'rgba(248,113,113,.1)', border: '1px solid rgba(248,113,113,.25)', borderRadius: 9, padding: '9px 14px', fontSize: 12, color: '#f87171', marginBottom: 14 },
 }
