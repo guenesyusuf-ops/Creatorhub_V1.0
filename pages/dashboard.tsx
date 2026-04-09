@@ -859,13 +859,16 @@ const HTML = `
     <div class="cal-grid" id="cal-days"></div>
   </div>
 
-  <!-- Neueste Creator -->
+  <!-- Neue Uploads -->
   <div class="rsb-block">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="rsb-title" style="margin-bottom:0">Neueste Creator</div>
-      <span style="font-size:10px;color:var(--blue);cursor:pointer;font-weight:600" id="rsb-view-all">Alle →</span>
+      <div class="rsb-title" style="margin-bottom:0">Neue Uploads</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="rsb-up-prev" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:0 3px;line-height:1;font-family:inherit">‹</button>
+        <button id="rsb-up-next" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:0 3px;line-height:1;font-family:inherit">›</button>
+      </div>
     </div>
-    <div id="rsb-creators"></div>
+    <div id="rsb-new-uploads"></div>
   </div>
 
   <!-- Tools -->
@@ -1333,30 +1336,49 @@ function rAnalytics(){
   G('an-next')?.addEventListener('click',function(){if(_anPage<totalPages-1){_anPage++;rAnalytics();}});
 }
 
+var _rsbUpPage=0;
+
 function rRightSidebar(){
-  // Neueste Creator (max 5)
-  var rsb=G('rsb-creators');
-  if(rsb){
-    var latest=[...S.creators].slice(0,5);
-    if(!latest.length){rsb.innerHTML='<div style="font-size:11px;color:var(--muted)">Noch keine Creator</div>';return;}
-    rsb.innerHTML=latest.map(function(c){
-      var av=c.photo?'<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">'
-        :'<div style="width:30px;height:30px;border-radius:8px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">'+c.ini+'</div>';
-      return '<div class="rsb-creator" data-rsb-cid="'+c.id+'">'
-        +'<div class="rsb-cav">'+av+'</div>'
-        +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.name+'</div>'
-        +'<div style="font-size:10px;color:var(--muted)">'+((c.tags||[])[0]||'Creator')+'</div></div>'
-        +'</div>';
-    }).join('');
-    rsb.querySelectorAll('[data-rsb-cid]').forEach(function(el){
-      el.addEventListener('click',function(){
-        var cid=el.dataset.rsbCid;
-        go('creators');
-        setTimeout(function(){openC(cid);},80);
-      });
+  rNewUploads();
+}
+
+function rNewUploads(){
+  var el=G('rsb-new-uploads');
+  if(!el)return;
+  var creatorsWithNew=[];
+  S.creators.forEach(function(c){
+    var ups=S.allUploads.filter(function(u){
+      return String(u.creator_id)===String(c.id)&&!u.uploaded_at;
     });
-  }
-  G('rsb-view-all')?.addEventListener('click',function(){go('creators');});
+    if(ups.length>0)creatorsWithNew.push({creator:c,count:ups.length,latest:ups[0]});
+  });
+  creatorsWithNew.sort(function(a,b){
+    var da=a.latest&&a.latest.created_at?new Date(a.latest.created_at):new Date(0);
+    var db=b.latest&&b.latest.created_at?new Date(b.latest.created_at):new Date(0);
+    return db-da;
+  });
+  var perPage=5,total=creatorsWithNew.length;
+  var totalPages=Math.max(1,Math.ceil(total/perPage));
+  if(_rsbUpPage>=totalPages)_rsbUpPage=0;
+  var page=creatorsWithNew.slice(_rsbUpPage*perPage,(_rsbUpPage+1)*perPage);
+  var prev=G('rsb-up-prev'),next=G('rsb-up-next');
+  if(prev){prev.style.opacity=_rsbUpPage>0?'1':'0.3';prev.onclick=function(){if(_rsbUpPage>0){_rsbUpPage--;rNewUploads();}};}
+  if(next){next.style.opacity=(_rsbUpPage+1)<totalPages?'1':'0.3';next.onclick=function(){if((_rsbUpPage+1)<totalPages){_rsbUpPage++;rNewUploads();}};}
+  if(!page.length){el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0">Keine neuen Uploads 🎉</div>';return;}
+  el.innerHTML=page.map(function(item){
+    var c=item.creator;
+    var av=c.photo
+      ?'<img src="'+c.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">'
+      :'<div style="width:30px;height:30px;border-radius:8px;background:'+(c.color_from||c.color||'#818cf8')+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">'+(c.ini||c.name.slice(0,2).toUpperCase())+'</div>';
+    return '<div class="rsb-creator" data-rsb-cid="'+c.id+'">'      +'<div class="rsb-cav">'+av+'</div>'      +'<div style="flex:1;min-width:0">'      +'<div style="font-size:12px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.name+'</div>'      +'<div style="font-size:10px;color:var(--muted)">'+((c.tags||[])[0]||'Creator')+'</div>'      +'</div>'      +'<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;background:rgba(244,114,182,.15);color:#f472b6;padding:2px 6px;border-radius:4px;border:1px solid rgba(244,114,182,.25);flex-shrink:0">'+item.count+' neu</span>'      +'</div>';
+  }).join('');
+  el.querySelectorAll('[data-rsb-cid]').forEach(function(row){
+    row.addEventListener('click',function(){
+      var cid=row.dataset.rsbCid;
+      go('creators');
+      setTimeout(function(){openC(cid);},80);
+    });
+  });
 }
 
 function cRowsHTML(list){
@@ -1656,7 +1678,7 @@ function openFld(fid,tab){
   G('fhdr-dot').addEventListener('click',e=>{e.stopPropagation();showDot(e.currentTarget,()=>openM('editFld',{id:fid,tab}),()=>delFld(fid,tab,fld.name));});
   G('bulk-toggle').addEventListener('click',()=>{S.bulkMode=!S.bulkMode;S.bulkSel=[];G('bulk-bar').classList.toggle('on',S.bulkMode);G('bulk-toggle').textContent=S.bulkMode?'☑ Auswahl':'☐ Auswahl';rFiles(fld);});
   G('bulk-cancel').addEventListener('click',()=>{S.bulkMode=false;S.bulkSel=[];G('bulk-bar').classList.remove('on');G('bulk-toggle').textContent='☐ Auswahl';rFiles(fld);});
-  G('bulk-upload').addEventListener('click',()=>{const today=new Date().toISOString().slice(0,10);S.bulkSel.forEach(id=>{const f=fld.files.find(x=>x.id===id);if(f)f.uploadedAt=today;});S.bulkSel=[];rFiles(fld);showT('✓ Als hochgeladen markiert');});
+  G('bulk-upload').addEventListener('click',()=>{const today=new Date().toISOString().slice(0,10);S.bulkSel.forEach(id=>{const f=fld.files.find(x=>x.id===id);if(f){f.uploadedAt=today;var u=S.allUploads.find(x=>String(x.id)===String(id));if(u)u.uploaded_at=today;}});S.bulkSel=[];rFiles(fld);rNewUploads();showT('✓ Als hochgeladen markiert');});
   G('bulk-del').addEventListener('click',()=>{askConfirm(\`\${S.bulkSel.length} Dateien löschen?\`,()=>{fld.files=fld.files.filter(f=>!S.bulkSel.includes(f.id));S.bulkSel=[];rFiles(fld);rCHdr();showT('Gelöscht');});});
   rFiles(fld);
   // Ungelesene Kommentare für jede Datei laden (read_by_admin=false)
@@ -1731,8 +1753,10 @@ function openLB(fid,fldId){
   G('lb-name').textContent=file.name;G('lb-meta').textContent=\`\${file.size||''} · \${fld?.name||''}\`;
   G('lb-dl').onclick=()=>{const a=document.createElement('a');a.href='/api/download?url='+encodeURIComponent(file.url)+'&name='+encodeURIComponent(file.name);a.download=file.name;document.body.appendChild(a);a.click();document.body.removeChild(a);};
   const li=G('lb-img'),lv=G('lb-vid');
-  if(file.type==='image'&&file.url){li.src=file.url;li.style.display='block';lv.style.display='none';}
-  else if(file.type==='video'&&file.url){lv.src=file.url;lv.style.display='block';li.style.display='none';}
+  var _isImg=file.type==='image'||(file.mime_type||'').startsWith('image/')||(file.url||'').match(/\.(jpe?g|png|gif|webp|avif)$/i);
+  var _isVid=file.type==='video'||(file.mime_type||'').startsWith('video/')||(file.url||'').match(/\.(mp4|mov|avi|webm|mkv)$/i);
+  if(_isImg&&file.url){li.src=file.url;li.style.display='block';lv.style.display='none';lv.removeAttribute('src');}
+  else if(_isVid&&file.url){lv.src=file.url;lv.style.display='block';lv.load();li.style.display='none';}
   else{li.style.display='none';lv.style.display='none';}
   rLbComments([]);
   var _lbToken=localStorage.getItem('token')||'';
@@ -2854,7 +2878,7 @@ window.S=S;window.openPortal=openPortal;window.renderPortalPage=renderPortalPage
 window.rDash=rDash;window.rCreators=rCreators;window.rCInvite=rCInvite;
 window.openC=openC;window.go=go;window.rProdukte=rProdukte;window.rProjekte=rProjekte;
 window.rKat=rKat;window.rCT=rCT;window.rCHdr=rCHdr;
-window.rRightSidebar=rRightSidebar;
+window.rRightSidebar=rRightSidebar;window.rNewUploads=rNewUploads;
 window.rAnalytics=rAnalytics;
 // ── HERO CLOCK ──────────────────────────────────────────
 function initHeroClock(){
